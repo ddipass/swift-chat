@@ -762,7 +762,7 @@ function SettingsScreen(): React.JSX.Element {
                 'Delete All Conversations',
                 'Are you sure you want to delete all conversations? This action cannot be undone.',
                 [
-                  {text: 'Cancel', style: 'cancel'},
+                  { text: 'Cancel', style: 'cancel' },
                   {
                     text: 'Delete',
                     style: 'destructive',
