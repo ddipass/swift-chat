@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -28,10 +28,16 @@ jobs:
           cd react-native
           npm install
       
+      - name: Fix Swift version conflict
+        run: |
+          cd react-native/ios
+          # 统一设置 Swift 版本为 5.0
+          sed -i '' 's/SWIFT_VERSION = 6.0/SWIFT_VERSION = 5.0/g' SwiftChat.xcodeproj/project.pbxproj || true
+      
       - name: Install CocoaPods dependencies
         run: |
           cd react-native/ios
-          pod install
+          pod install --repo-update
       
       - name: Build macOS app
         run: |
@@ -45,12 +51,12 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            SWIFT_VERSION=5.0 \
             clean build
       
       - name: Create DMG
         run: |
           cd react-native/ios
-          # 找到编译好的 .app
           APP_PATH=$(find ./build/Build/Products/Release-maccatalyst -name "SwiftChat.app" -type d | head -1)
           
           if [ -z "$APP_PATH" ]; then
@@ -59,18 +65,14 @@ jobs:
           fi
           
           echo "Found app at: $APP_PATH"
-          
-          # 创建临时目录
           mkdir -p dmg_temp
           cp -R "$APP_PATH" dmg_temp/
           
-          # 创建 DMG
           hdiutil create -volname "SwiftChat" \
             -srcfolder dmg_temp \
             -ov -format UDZO \
             SwiftChat-macOS.dmg
           
-          # 清理
           rm -rf dmg_temp
       
       - name: Upload artifact
