@@ -750,7 +750,9 @@ function SettingsScreen(): React.JSX.Element {
           style={[styles.versionContainer, styles.dangerButton]}
           onPress={() => {
             if (Platform.OS === 'web') {
-              const confirmed = window.confirm('Are you sure you want to delete all conversations? This action cannot be undone.');
+              const confirmed = window.confirm(
+                'Are you sure you want to delete all conversations? This action cannot be undone.'
+              );
               if (confirmed) {
                 deleteAllMessages();
                 alert('All conversations have been deleted.');
@@ -760,20 +762,25 @@ function SettingsScreen(): React.JSX.Element {
                 'Delete All Conversations',
                 'Are you sure you want to delete all conversations? This action cannot be undone.',
                 [
-                  { text: 'Cancel', style: 'cancel' },
+                  {text: 'Cancel', style: 'cancel'},
                   {
                     text: 'Delete',
                     style: 'destructive',
                     onPress: () => {
                       deleteAllMessages();
-                      Alert.alert('Success', 'All conversations have been deleted.');
+                      Alert.alert(
+                        'Success',
+                        'All conversations have been deleted.'
+                      );
                     },
                   },
-                ],
+                ]
               );
             }
           }}>
-          <Text style={[styles.label, styles.dangerText]}>Clear All Conversations</Text>
+          <Text style={[styles.label, styles.dangerText]}>
+            Clear All Conversations
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.versionContainer}
