@@ -160,6 +160,15 @@ export function deleteMessagesBySessionId(sessionId: number) {
   storage.delete(sessionIdPrefix + sessionId);
 }
 
+export function deleteAllMessages() {
+  const chatList = getMessageList();
+  chatList.forEach(chat => {
+    storage.delete(sessionIdPrefix + chat.sessionId);
+  });
+  storage.delete(messageListKey);
+  storage.delete(currentSessionIdKey);
+}
+
 export function getSessionId() {
   return storage.getNumber(currentSessionIdKey) ?? 0;
 }
