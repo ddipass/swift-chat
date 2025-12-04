@@ -1,0 +1,81 @@
+name: Build for macOS
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:  # 允许手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          cd react-native
+          npm install
+      
+      - name: Install CocoaPods dependencies
+        run: |
+          cd react-native/ios
+          pod install
+      
+      - name: Build macOS app
+        run: |
+          cd react-native/ios
+          xcodebuild \
+            -workspace SwiftChat.xcworkspace \
+            -scheme SwiftChat \
+            -destination 'platform=macOS,variant=Mac Catalyst' \
+            -configuration Release \
+            -derivedDataPath ./build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+      
+      - name: Create DMG
+        run: |
+          cd react-native/ios
+          # 找到编译好的 .app
+          APP_PATH=$(find ./build/Build/Products/Release-maccatalyst -name "SwiftChat.app" -type d | head -1)
+          
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: SwiftChat.app not found"
+            exit 1
+          fi
+          
+          echo "Found app at: $APP_PATH"
+          
+          # 创建临时目录
+          mkdir -p dmg_temp
+          cp -R "$APP_PATH" dmg_temp/
+          
+          # 创建 DMG
+          hdiutil create -volname "SwiftChat" \
+            -srcfolder dmg_temp \
+            -ov -format UDZO \
+            SwiftChat-macOS.dmg
+          
+          # 清理
+          rm -rf dmg_temp
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftChat-macOS
+          path: react-native/ios/SwiftChat-macOS.dmg
+          retention-days: 30
