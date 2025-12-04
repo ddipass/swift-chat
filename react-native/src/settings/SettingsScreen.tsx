@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Image,
   Linking,
   Platform,
@@ -16,6 +17,7 @@ import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { setHapticFeedbackEnabled, trigger } from '../chat/util/HapticUtils.ts';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback/src';
 import {
+  deleteAllMessages,
   getAllImageSize,
   getAllModels,
   getApiKey,
@@ -745,6 +747,35 @@ function SettingsScreen(): React.JSX.Element {
           />
         </TouchableOpacity>
         <TouchableOpacity
+          style={[styles.versionContainer, styles.dangerButton]}
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              const confirmed = window.confirm('Are you sure you want to delete all conversations? This action cannot be undone.');
+              if (confirmed) {
+                deleteAllMessages();
+                alert('All conversations have been deleted.');
+              }
+            } else {
+              Alert.alert(
+                'Delete All Conversations',
+                'Are you sure you want to delete all conversations? This action cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => {
+                      deleteAllMessages();
+                      Alert.alert('Success', 'All conversations have been deleted.');
+                    },
+                  },
+                ],
+              );
+            }
+          }}>
+          <Text style={[styles.label, styles.dangerText]}>Clear All Conversations</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           style={styles.versionContainer}
           activeOpacity={1}
           onPress={handleCheckUpgrade}>
@@ -897,6 +928,13 @@ const createStyles = (colors: ColorScheme) =>
       marginRight: -14,
       width: 32,
       height: 32,
+    },
+    dangerButton: {
+      borderColor: '#ff3b30',
+      borderWidth: 1,
+    },
+    dangerText: {
+      color: '#ff3b30',
     },
     configSwitchContainer: {
       flexDirection: 'row',
