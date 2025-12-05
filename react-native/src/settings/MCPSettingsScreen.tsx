@@ -22,7 +22,7 @@ import {
   removeMCPServer,
   MCPServer,
 } from '../storage/StorageUtils';
-import { CustomTextInput } from '../chat/component/CustomTextInput';
+import CustomTextInput from './CustomTextInput';
 
 const MCPSettingsScreen = () => {
   const { colors } = useTheme();
