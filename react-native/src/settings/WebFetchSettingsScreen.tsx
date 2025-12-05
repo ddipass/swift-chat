@@ -1,13 +1,32 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
 import { useTheme, ColorScheme } from '../theme';
 import {
   getFetchTimeout,
   setFetchTimeout,
   getFetchMaxContentLength,
   setFetchMaxContentLength,
+  getContentProcessingMode,
+  setContentProcessingMode,
+  getAISummaryPrompt,
+  setAISummaryPrompt,
+  getSummaryModel,
+  setSummaryModel,
+  getRemoveElements,
+  setRemoveElements,
+  ContentProcessingMode,
+  getAllModels,
 } from '../storage/StorageUtils';
 import { CustomTextInput } from '../chat/component/CustomTextInput';
+import { Model } from '../types/Chat';
 
 const WebFetchSettingsScreen = () => {
   const { colors } = useTheme();
@@ -15,6 +34,29 @@ const WebFetchSettingsScreen = () => {
   const [maxLength, setMaxLength] = useState(
     String(getFetchMaxContentLength())
   );
+  const [mode, setMode] = useState<ContentProcessingMode>(
+    getContentProcessingMode()
+  );
+  const [summaryPrompt, setSummaryPrompt] = useState(getAISummaryPrompt());
+  const [summaryModel, setSummaryModelState] = useState(getSummaryModel());
+  const [removeElements, setRemoveElementsState] = useState(
+    getRemoveElements()
+  );
+  const [showModelPicker, setShowModelPicker] = useState(false);
+
+  const allModels = getAllModels();
+  const textModels = allModels.textModel || [];
+
+  const handleModeChange = (newMode: ContentProcessingMode) => {
+    setMode(newMode);
+    setContentProcessingMode(newMode);
+  };
+
+  const handleModelSelect = (model: Model) => {
+    setSummaryModelState(model);
+    setSummaryModel(model);
+    setShowModelPicker(false);
+  };
 
   const styles = createStyles(colors);
 
@@ -58,30 +100,107 @@ const WebFetchSettingsScreen = () => {
         />
         <Text style={styles.hint}>Range: 1000-50000 characters</Text>
 
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>How it works:</Text>
-          <Text style={styles.infoText}>
-            1. Fetches content from the specified URL
-          </Text>
-          <Text style={styles.infoText}>
-            2. Removes scripts, styles, and other non-content elements
-          </Text>
-          <Text style={styles.infoText}>3. Extracts main text content</Text>
-          <Text style={styles.infoText}>
-            4. Limits to configured maximum length
-          </Text>
-          <Text style={styles.infoText}>
-            5. Returns clean text for AI processing
-          </Text>
-        </View>
+        <View style={styles.divider} />
 
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>Current Settings:</Text>
-          <Text style={styles.infoText}>• Timeout: {timeout} seconds</Text>
-          <Text style={styles.infoText}>
-            • Max Length: {maxLength} characters
-          </Text>
-        </View>
+        <Text style={styles.sectionSubtitle}>Content Processing Mode</Text>
+
+        <TouchableOpacity
+          style={styles.radioOption}
+          onPress={() => handleModeChange('regex')}>
+          <View style={styles.radio}>
+            {mode === 'regex' && <View style={styles.radioSelected} />}
+          </View>
+          <View style={styles.radioContent}>
+            <Text style={styles.radioLabel}>Regex - Fast, basic cleaning</Text>
+            <Text style={styles.radioDescription}>
+              Remove HTML tags using regex patterns. Fast and free.
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.radioOption}
+          onPress={() => handleModeChange('ai_summary')}>
+          <View style={styles.radio}>
+            {mode === 'ai_summary' && <View style={styles.radioSelected} />}
+          </View>
+          <View style={styles.radioContent}>
+            <Text style={styles.radioLabel}>
+              AI Summary - Smart content extraction
+            </Text>
+            <Text style={styles.radioDescription}>
+              Use AI to intelligently extract and summarize content. Uses
+              tokens.
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {mode === 'ai_summary' && (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.sectionSubtitle}>AI Summary Settings</Text>
+
+            <Text style={styles.label}>Summary Model (for web fetch only)</Text>
+            <TouchableOpacity
+              style={styles.modelSelector}
+              onPress={() => setShowModelPicker(!showModelPicker)}>
+              <Text style={styles.modelText}>{summaryModel.modelName}</Text>
+              <Text style={styles.modelArrow}>▼</Text>
+            </TouchableOpacity>
+            <Text style={styles.hint}>
+              Separate from your chat model. Won't affect conversation context.
+            </Text>
+
+            {showModelPicker && (
+              <View style={styles.modelPicker}>
+                {textModels.map(model => (
+                  <TouchableOpacity
+                    key={model.modelId}
+                    style={styles.modelOption}
+                    onPress={() => handleModelSelect(model)}>
+                    <Text style={styles.modelOptionText}>
+                      {model.modelName}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <Text style={styles.label}>Summary Prompt</Text>
+            <TextInput
+              style={styles.promptInput}
+              value={summaryPrompt}
+              onChangeText={text => {
+                setSummaryPrompt(text);
+                setAISummaryPrompt(text);
+              }}
+              placeholder="Enter summary prompt"
+              multiline
+              numberOfLines={8}
+              placeholderTextColor={colors.secondaryText}
+            />
+          </>
+        )}
+
+        {mode === 'regex' && (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.sectionSubtitle}>Regex Settings</Text>
+
+            <CustomTextInput
+              label="Remove Elements (comma separated)"
+              value={removeElements}
+              onChangeText={text => {
+                setRemoveElementsState(text);
+                setRemoveElements(text);
+              }}
+              placeholder="script,style,nav,footer,aside"
+            />
+            <Text style={styles.hint}>
+              HTML elements to remove from content
+            </Text>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -106,6 +225,12 @@ const createStyles = (colors: ColorScheme) =>
       color: colors.text,
       marginBottom: 8,
     },
+    sectionSubtitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 16,
+    },
     description: {
       fontSize: 14,
       color: colors.secondaryText,
@@ -118,23 +243,97 @@ const createStyles = (colors: ColorScheme) =>
       marginBottom: 16,
       marginLeft: 4,
     },
-    infoSection: {
-      marginTop: 24,
-      padding: 16,
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 24,
+    },
+    radioOption: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: 16,
+      padding: 12,
       backgroundColor: colors.inputBackground,
       borderRadius: 8,
     },
-    infoTitle: {
+    radio: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      marginRight: 12,
+      marginTop: 2,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    radioSelected: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.primary,
+    },
+    radioContent: {
+      flex: 1,
+    },
+    radioLabel: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    radioDescription: {
       fontSize: 14,
-      fontWeight: '600',
+      color: colors.secondaryText,
+      lineHeight: 18,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '500',
       color: colors.text,
       marginBottom: 8,
     },
-    infoText: {
-      fontSize: 14,
+    modelSelector: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: colors.inputBackground,
+      padding: 16,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    modelText: {
+      fontSize: 16,
+      color: colors.text,
+    },
+    modelArrow: {
+      fontSize: 12,
       color: colors.secondaryText,
-      lineHeight: 20,
-      marginBottom: 4,
+    },
+    modelPicker: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 8,
+      marginBottom: 16,
+      maxHeight: 200,
+    },
+    modelOption: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modelOptionText: {
+      fontSize: 16,
+      color: colors.text,
+    },
+    promptInput: {
+      backgroundColor: colors.inputBackground,
+      color: colors.text,
+      padding: 12,
+      borderRadius: 8,
+      fontSize: 14,
+      minHeight: 120,
+      textAlignVertical: 'top',
+      marginBottom: 16,
     },
   });
 

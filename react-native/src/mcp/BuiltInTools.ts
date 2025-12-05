@@ -5,6 +5,10 @@
 import {
   getFetchTimeout,
   getFetchMaxContentLength,
+  getContentProcessingMode,
+  getAISummaryPrompt,
+  getSummaryModel,
+  getRemoveElements,
 } from '../storage/StorageUtils';
 
 export interface BuiltInTool {
@@ -16,6 +20,81 @@ export interface BuiltInTool {
     required: string[];
   };
   execute: (args: Record<string, unknown>) => Promise<unknown>;
+}
+
+/**
+ * Clean HTML using regex
+ */
+function cleanHTMLWithRegex(html: string): string {
+  const removeElements = getRemoveElements()
+    .split(',')
+    .map(s => s.trim());
+  let cleaned = html;
+
+  // Remove specified elements
+  removeElements.forEach(tag => {
+    const regex = new RegExp(
+      `<${tag}\\b[^<]*(?:(?!<\\/${tag}>)<[^<]*)*<\\/${tag}>`,
+      'gi'
+    );
+    cleaned = cleaned.replace(regex, '');
+  });
+
+  // Remove all remaining HTML tags
+  cleaned = cleaned.replace(/<[^>]+>/g, ' ');
+
+  // Clean up whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+  return cleaned;
+}
+
+/**
+ * Summarize HTML using AI
+ */
+async function summarizeHTMLWithAI(html: string, url: string): Promise<string> {
+  try {
+    const prompt = getAISummaryPrompt();
+    const model = getSummaryModel();
+
+    // Import bedrock-api dynamically to avoid circular dependency
+    const { invokeBedrockWithCallBack } = await import('../api/bedrock-api');
+
+    // Limit HTML size to avoid token overflow
+    const maxHtmlLength = 50000;
+    const truncatedHtml = html.substring(0, maxHtmlLength);
+
+    let summary = '';
+
+    // Create a temporary session for summarization
+    await invokeBedrockWithCallBack(
+      [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `${prompt}\n\nURL: ${url}\n\nHTML:\n${truncatedHtml}`,
+            },
+          ],
+        },
+      ],
+      model,
+      (result, _complete) => {
+        summary += result;
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+
+    return summary;
+  } catch (error) {
+    console.warn('AI summarization failed:', error);
+    // Fallback to regex cleaning
+    return cleanHTMLWithRegex(html);
+  }
 }
 
 /**
@@ -86,13 +165,20 @@ const webFetchTool: BuiltInTool = {
         const text = await response.text();
         clearTimeout(timeoutId);
 
-        // Simple content extraction - remove HTML tags
-        const cleanText = text
-          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-          .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
+        // Get processing mode
+        const mode = getContentProcessingMode();
+        let cleanText: string;
+        let processedBy: string;
+
+        if (mode === 'ai_summary') {
+          // AI summarization
+          cleanText = await summarizeHTMLWithAI(text, url);
+          processedBy = 'ai_summary';
+        } else {
+          // Regex cleaning
+          cleanText = cleanHTMLWithRegex(text);
+          processedBy = 'regex';
+        }
 
         const maxLength = getFetchMaxContentLength();
         const truncated = cleanText.length > maxLength;
@@ -103,6 +189,7 @@ const webFetchTool: BuiltInTool = {
           url,
           truncated,
           originalLength: cleanText.length,
+          processedBy,
         };
       }
 

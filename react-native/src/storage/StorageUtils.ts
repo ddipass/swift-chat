@@ -826,6 +826,54 @@ export function setMCPEnabled(enabled: boolean) {
   storage.set(mcpEnabledKey, enabled);
 }
 
+// MCP Server Configuration
+export interface MCPServer {
+  id: string;
+  name: string;
+  url: string;
+  apiKey: string;
+  enabled: boolean;
+}
+
+const mcpServersKey = 'mcpServers';
+
+export function getMCPServers(): MCPServer[] {
+  const serversJson = storage.getString(mcpServersKey);
+  if (!serversJson) {
+    return [];
+  }
+  try {
+    return JSON.parse(serversJson);
+  } catch (e) {
+    return [];
+  }
+}
+
+export function setMCPServers(servers: MCPServer[]) {
+  storage.set(mcpServersKey, JSON.stringify(servers));
+}
+
+export function addMCPServer(server: MCPServer) {
+  const servers = getMCPServers();
+  servers.push(server);
+  setMCPServers(servers);
+}
+
+export function updateMCPServer(serverId: string, updates: Partial<MCPServer>) {
+  const servers = getMCPServers();
+  const index = servers.findIndex(s => s.id === serverId);
+  if (index !== -1) {
+    servers[index] = { ...servers[index], ...updates };
+    setMCPServers(servers);
+  }
+}
+
+export function removeMCPServer(serverId: string) {
+  const servers = getMCPServers();
+  setMCPServers(servers.filter(s => s.id !== serverId));
+}
+
+// Legacy single server support (for backward compatibility)
 export function getMCPServerUrl(): string {
   return storage.getString(mcpServerUrlKey) ?? '';
 }
@@ -868,4 +916,66 @@ export function getFetchMaxContentLength(): number {
 
 export function setFetchMaxContentLength(length: number) {
   storage.set(fetchMaxContentLengthKey, length);
+}
+
+// Content Processing Mode
+export type ContentProcessingMode = 'regex' | 'ai_summary';
+
+const contentProcessingModeKey = 'contentProcessingMode';
+const aiSummaryPromptKey = 'aiSummaryPrompt';
+const summaryModelKey = 'summaryModel';
+const removeElementsKey = 'removeElements';
+
+export function getContentProcessingMode(): ContentProcessingMode {
+  return (
+    (storage.getString(contentProcessingModeKey) as ContentProcessingMode) ??
+    'regex'
+  );
+}
+
+export function setContentProcessingMode(mode: ContentProcessingMode) {
+  storage.set(contentProcessingModeKey, mode);
+}
+
+// AI Summary Settings
+const DEFAULT_SUMMARY_PROMPT = `Extract main content from HTML.
+Requirements:
+- Keep original text verbatim
+- Remove all ads and navigation
+- Keep valuable reference links
+- Remove formatting, keep structure
+- Output plain text only`;
+
+export function getAISummaryPrompt(): string {
+  return storage.getString(aiSummaryPromptKey) ?? DEFAULT_SUMMARY_PROMPT;
+}
+
+export function setAISummaryPrompt(prompt: string) {
+  storage.set(aiSummaryPromptKey, prompt);
+}
+
+// Summary Model (for web fetch only, separate from chat model)
+export function getSummaryModel(): Model {
+  const modelString = storage.getString(summaryModelKey);
+  if (modelString) {
+    return JSON.parse(modelString) as Model;
+  }
+  // Default to chat model
+  return getTextModel();
+}
+
+export function setSummaryModel(model: Model) {
+  storage.set(summaryModelKey, JSON.stringify(model));
+}
+
+// Regex Settings
+const DEFAULT_REMOVE_ELEMENTS =
+  'script,style,nav,footer,aside,header,iframe,ads';
+
+export function getRemoveElements(): string {
+  return storage.getString(removeElementsKey) ?? DEFAULT_REMOVE_ELEMENTS;
+}
+
+export function setRemoveElements(elements: string) {
+  storage.set(removeElementsKey, elements);
 }

@@ -14,24 +14,103 @@ import { useTheme, ColorScheme } from '../theme';
 import {
   getMCPEnabled,
   setMCPEnabled,
-  getMCPServerUrl,
-  setMCPServerUrl,
-  getMCPApiKey,
-  setMCPApiKey,
   getMCPMaxIterations,
   setMCPMaxIterations,
+  getMCPServers,
+  addMCPServer,
+  updateMCPServer,
+  removeMCPServer,
+  MCPServer,
 } from '../storage/StorageUtils';
-import { refreshMCPTools } from '../mcp/MCPService';
 import { CustomTextInput } from '../chat/component/CustomTextInput';
 
 const MCPSettingsScreen = () => {
   const { colors } = useTheme();
   const [mcpEnabled, setMcpEnabled] = useState(getMCPEnabled());
-  const [mcpServerUrl, setMcpServerUrl] = useState(getMCPServerUrl());
-  const [mcpApiKey, setMcpApiKey] = useState(getMCPApiKey());
   const [mcpMaxIterations, setMcpMaxIterations] = useState(
     getMCPMaxIterations()
   );
+  const [servers, setServers] = useState<MCPServer[]>(getMCPServers());
+  const [showAddServer, setShowAddServer] = useState(false);
+  const [newServerName, setNewServerName] = useState('');
+  const [newServerUrl, setNewServerUrl] = useState('');
+  const [newServerApiKey, setNewServerApiKey] = useState('');
+
+  const handleAddServer = () => {
+    if (!newServerName || !newServerUrl) {
+      if (Platform.OS === 'web') {
+        alert('Please enter server name and URL');
+      } else {
+        Alert.alert('Error', 'Please enter server name and URL');
+      }
+      return;
+    }
+
+    // Validate URL format
+    try {
+      const parsedUrl = new URL(newServerUrl);
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        if (Platform.OS === 'web') {
+          alert('Invalid URL: Only HTTP/HTTPS protocols are supported');
+        } else {
+          Alert.alert(
+            'Error',
+            'Invalid URL: Only HTTP/HTTPS protocols are supported'
+          );
+        }
+        return;
+      }
+    } catch (e) {
+      if (Platform.OS === 'web') {
+        alert('Invalid URL format');
+      } else {
+        Alert.alert('Error', 'Invalid URL format');
+      }
+      return;
+    }
+
+    const newServer: MCPServer = {
+      id: Date.now().toString(),
+      name: newServerName,
+      url: newServerUrl,
+      apiKey: newServerApiKey,
+      enabled: true,
+    };
+
+    addMCPServer(newServer);
+    setServers([...servers, newServer]);
+    setShowAddServer(false);
+    setNewServerName('');
+    setNewServerUrl('');
+    setNewServerApiKey('');
+  };
+
+  const handleToggleServer = (serverId: string, enabled: boolean) => {
+    updateMCPServer(serverId, { enabled });
+    setServers(servers.map(s => (s.id === serverId ? { ...s, enabled } : s)));
+  };
+
+  const handleRemoveServer = (serverId: string, serverName: string) => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`Remove server "${serverName}"?`);
+      if (confirmed) {
+        removeMCPServer(serverId);
+        setServers(servers.filter(s => s.id !== serverId));
+      }
+    } else {
+      Alert.alert('Remove Server', `Remove server "${serverName}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            removeMCPServer(serverId);
+            setServers(servers.filter(s => s.id !== serverId));
+          },
+        },
+      ]);
+    }
+  };
 
   const styles = createStyles(colors);
 
@@ -59,25 +138,6 @@ const MCPSettingsScreen = () => {
         {mcpEnabled && (
           <>
             <CustomTextInput
-              label="MCP Server URL"
-              value={mcpServerUrl}
-              onChangeText={text => {
-                setMcpServerUrl(text);
-                setMCPServerUrl(text);
-              }}
-              placeholder="http://localhost:3000"
-            />
-            <CustomTextInput
-              label="MCP API Key (Optional)"
-              value={mcpApiKey}
-              onChangeText={text => {
-                setMcpApiKey(text);
-                setMCPApiKey(text);
-              }}
-              placeholder="Enter API key if required"
-              secureTextEntry
-            />
-            <CustomTextInput
               label="Max Tool Call Iterations"
               value={String(mcpMaxIterations)}
               onChangeText={text => {
@@ -90,18 +150,88 @@ const MCPSettingsScreen = () => {
               placeholder="2"
               keyboardType="numeric"
             />
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => {
-                refreshMCPTools();
-                if (Platform.OS === 'web') {
-                  alert('MCP tools refreshed');
-                } else {
-                  Alert.alert('Success', 'MCP tools refreshed');
-                }
-              }}>
-              <Text style={styles.buttonText}>Refresh MCP Tools</Text>
-            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <Text style={styles.sectionSubtitle}>MCP Servers</Text>
+
+            {servers.map(server => (
+              <View key={server.id} style={styles.serverCard}>
+                <View style={styles.serverHeader}>
+                  <Text style={styles.serverName}>{server.name}</Text>
+                  <Switch
+                    value={server.enabled}
+                    onValueChange={enabled =>
+                      handleToggleServer(server.id, enabled)
+                    }
+                  />
+                </View>
+                <Text style={styles.serverUrl}>{server.url}</Text>
+                {server.apiKey && (
+                  <Text style={styles.serverApiKey}>
+                    API Key: {server.apiKey.substring(0, 8)}••••
+                  </Text>
+                )}
+                <View style={styles.serverActions}>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => handleRemoveServer(server.id, server.name)}>
+                    <Text style={styles.removeButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+
+            {!showAddServer && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setShowAddServer(true)}>
+                <Text style={styles.addButtonText}>+ Add Server</Text>
+              </TouchableOpacity>
+            )}
+
+            {showAddServer && (
+              <View style={styles.addServerForm}>
+                <CustomTextInput
+                  label="Server Name"
+                  value={newServerName}
+                  onChangeText={setNewServerName}
+                  placeholder="My MCP Server"
+                />
+                <CustomTextInput
+                  label="Server URL"
+                  value={newServerUrl}
+                  onChangeText={setNewServerUrl}
+                  placeholder="http://localhost:3000"
+                />
+                <CustomTextInput
+                  label="API Key (Optional)"
+                  value={newServerApiKey}
+                  onChangeText={setNewServerApiKey}
+                  placeholder="Enter API key if required"
+                  secureTextEntry
+                />
+                <View style={styles.formActions}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      setShowAddServer(false);
+                      setNewServerName('');
+                      setNewServerUrl('');
+                      setNewServerApiKey('');
+                    }}>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={handleAddServer}>
+                    <Text style={styles.saveButtonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.divider} />
 
             <View style={styles.infoSection}>
               <Text style={styles.infoTitle}>Built-in Tools:</Text>
@@ -110,7 +240,11 @@ const MCPSettingsScreen = () => {
               </Text>
               <Text style={styles.infoTitleWithMargin}>External Tools:</Text>
               <Text style={styles.infoText}>
-                Connect to an MCP server to see available tools
+                {servers.filter(s => s.enabled).length > 0
+                  ? `Connected to ${
+                      servers.filter(s => s.enabled).length
+                    } server(s)`
+                  : 'No servers connected'}
               </Text>
             </View>
           </>
@@ -139,6 +273,12 @@ const createStyles = (colors: ColorScheme) =>
       color: colors.text,
       marginBottom: 8,
     },
+    sectionSubtitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 16,
+    },
     description: {
       fontSize: 14,
       color: colors.secondaryText,
@@ -155,14 +295,91 @@ const createStyles = (colors: ColorScheme) =>
       fontSize: 16,
       color: colors.text,
     },
-    button: {
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 24,
+    },
+    serverCard: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 8,
+      padding: 16,
+      marginBottom: 12,
+    },
+    serverHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    serverName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    serverUrl: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      marginBottom: 4,
+    },
+    serverApiKey: {
+      fontSize: 12,
+      color: colors.secondaryText,
+      marginBottom: 8,
+    },
+    serverActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+    removeButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+    },
+    removeButtonText: {
+      color: colors.error || '#FF3B30',
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    addButton: {
       backgroundColor: colors.primary,
       padding: 16,
       borderRadius: 8,
       alignItems: 'center',
-      marginTop: 16,
+      marginTop: 8,
     },
-    buttonText: {
+    addButtonText: {
+      color: colors.buttonText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    addServerForm: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 8,
+      padding: 16,
+      marginTop: 8,
+    },
+    formActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginTop: 16,
+      gap: 12,
+    },
+    cancelButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+    },
+    cancelButtonText: {
+      color: colors.secondaryText,
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 6,
+    },
+    saveButtonText: {
       color: colors.buttonText,
       fontSize: 16,
       fontWeight: '600',
