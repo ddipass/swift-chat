@@ -849,3 +849,23 @@ export function getMCPMaxIterations(): number {
 export function setMCPMaxIterations(iterations: number) {
   storage.set(mcpMaxIterationsKey, iterations);
 }
+
+// Web Fetch Settings
+const fetchTimeoutKey = 'fetchTimeout';
+const fetchMaxContentLengthKey = 'fetchMaxContentLength';
+
+export function getFetchTimeout(): number {
+  return storage.getNumber(fetchTimeoutKey) ?? 60000;
+}
+
+export function setFetchTimeout(timeout: number) {
+  storage.set(fetchTimeoutKey, timeout);
+}
+
+export function getFetchMaxContentLength(): number {
+  return storage.getNumber(fetchMaxContentLengthKey) ?? 5000;
+}
+
+export function setFetchMaxContentLength(length: number) {
+  storage.set(fetchMaxContentLengthKey, length);
+}

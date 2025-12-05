@@ -7,6 +7,8 @@ export type RouteParamList = {
     mode?: ChatMode;
   };
   Settings: NonNullable<unknown>;
+  MCPSettings: NonNullable<unknown>;
+  WebFetchSettings: NonNullable<unknown>;
   TokenUsage: NonNullable<unknown>;
   Prompt: {
     prompt?: SystemPrompt;

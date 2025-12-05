@@ -4,6 +4,11 @@ import {
   getMCPServerUrl,
   getMCPApiKey,
 } from '../storage/StorageUtils';
+import {
+  getBuiltInTools,
+  executeBuiltInTool,
+  isBuiltInTool,
+} from './BuiltInTools';
 
 let mcpClient: MCPClient | null = null;
 let cachedTools: MCPTool[] = [];
@@ -26,16 +31,24 @@ export function getMCPClient(): MCPClient | null {
 }
 
 export async function getMCPTools(): Promise<MCPTool[]> {
+  // Always include built-in tools
+  const builtInTools = getBuiltInTools().map(tool => ({
+    name: tool.name,
+    description: tool.description,
+    inputSchema: tool.inputSchema,
+  }));
+
+  // Add external MCP tools if enabled
   const client = getMCPClient();
   if (!client) {
-    return [];
+    return builtInTools;
   }
 
   if (cachedTools.length === 0) {
     cachedTools = await client.listTools();
   }
 
-  return cachedTools;
+  return [...builtInTools, ...cachedTools];
 }
 
 export function refreshMCPTools() {
@@ -47,6 +60,12 @@ export async function callMCPTool(
   name: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
+  // Check if it's a built-in tool
+  if (isBuiltInTool(name)) {
+    return await executeBuiltInTool(name, args);
+  }
+
+  // Otherwise, call external MCP server
   const client = getMCPClient();
   if (!client) {
     throw new Error('MCP not enabled');

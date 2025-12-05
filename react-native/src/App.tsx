@@ -11,6 +11,8 @@ import ChatScreen from './chat/ChatScreen.tsx';
 import { RouteParamList } from './types/RouteTypes.ts';
 import { AppProvider, useAppContext } from './history/AppProvider.tsx';
 import SettingsScreen from './settings/SettingsScreen.tsx';
+import MCPSettingsScreen from './settings/MCPSettingsScreen.tsx';
+import WebFetchSettingsScreen from './settings/WebFetchSettingsScreen.tsx';
 import Toast from 'react-native-toast-message';
 import TokenUsageScreen from './settings/TokenUsageScreen.tsx';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -59,6 +61,11 @@ const DrawerNavigator = () => {
       drawerContent={renderCustomDrawerContent}>
       <Drawer.Screen name="Bedrock" component={ChatScreen} />
       <Drawer.Screen name="Settings" component={SettingsScreen} />
+      <Drawer.Screen name="MCPSettings" component={MCPSettingsScreen} />
+      <Drawer.Screen
+        name="WebFetchSettings"
+        component={WebFetchSettingsScreen}
+      />
     </Drawer.Navigator>
   );
 };

@@ -1,8 +1,10 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   FlatList,
   Image,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -15,6 +17,7 @@ import {
 } from '@react-navigation/drawer';
 import { Chat, ChatMode } from '../types/Chat.ts';
 import {
+  deleteAllMessages,
   deleteMessagesBySessionId,
   getMessageList,
   getSessionId,
@@ -181,6 +184,48 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
               />
               <Text style={styles.settingsText}>Image</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.settingsTouch, styles.deleteAllButton]}
+              onPress={() => {
+                trigger(HapticFeedbackTypes.notificationWarning);
+                if (Platform.OS === 'web') {
+                  const confirmed = window.confirm(
+                    'Delete all conversations? This cannot be undone.'
+                  );
+                  if (confirmed) {
+                    deleteAllMessages();
+                    setGroupChatHistory([]);
+                    chatHistoryRef.current = [];
+                    sendEvent('deleteAllChats');
+                  }
+                } else {
+                  Alert.alert(
+                    'Delete All Conversations',
+                    'This action cannot be undone.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: () => {
+                          deleteAllMessages();
+                          setGroupChatHistory([]);
+                          chatHistoryRef.current = [];
+                          sendEvent('deleteAllChats');
+                        },
+                      },
+                    ]
+                  );
+                }
+              }}>
+              <Image
+                source={require('../assets/delete.png')}
+                style={styles.settingsLeftImg}
+              />
+              <Text style={[styles.settingsText, styles.deleteAllText]}>
+                Delete All Chats
+              </Text>
+            </TouchableOpacity>
           </View>
         }
         renderItem={({ item }) => {
@@ -227,6 +272,38 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
           }
         }}
       />
+      <TouchableOpacity
+        style={styles.settingsTouch}
+        onPress={() => {
+          setDrawerToPermanent();
+          navigation.navigate('MCPSettings');
+        }}>
+        <Image
+          source={
+            isDark
+              ? require('../assets/bedrock_dark.png')
+              : require('../assets/bedrock.png')
+          }
+          style={styles.settingsLeftImg}
+        />
+        <Text style={styles.settingsText}>MCP</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.settingsTouch}
+        onPress={() => {
+          setDrawerToPermanent();
+          navigation.navigate('WebFetchSettings');
+        }}>
+        <Image
+          source={
+            isDark
+              ? require('../assets/document_dark.png')
+              : require('../assets/document.png')
+          }
+          style={styles.settingsLeftImg}
+        />
+        <Text style={styles.settingsText}>Web Fetch</Text>
+      </TouchableOpacity>
       <TouchableOpacity
         style={styles.settingsTouch}
         onPress={() => {
@@ -334,6 +411,14 @@ const createStyles = (colors: ColorScheme) =>
     title: {
       fontSize: 16,
       color: colors.text,
+    },
+    deleteAllButton: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 12,
+    },
+    deleteAllText: {
+      color: colors.error || '#FF3B30',
     },
   });
 
