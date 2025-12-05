@@ -838,6 +838,9 @@ function ChatScreen(): React.JSX.Element {
         }
       }
 
+      // Prepare message for AI (with tools if needed)
+      let messageForAI = message[0];
+      
       // Add MCP tools to message if enabled and in text mode (only once per conversation)
       if (
         modeRef.current === ChatMode.Text &&
@@ -845,7 +848,9 @@ function ChatScreen(): React.JSX.Element {
         messagesRef.current.length === 0
       ) {
         const { addToolsToMessage } = await import('../mcp/MCPService');
-        message[0].text = await addToolsToMessage(message[0].text);
+        // Create a copy with tools added for AI, don't modify the original message
+        const textWithTools = await addToolsToMessage(message[0].text);
+        messageForAI = { ...message[0], text: textWithTools };
         mcpToolsAdded.current = true;
       }
 
@@ -855,7 +860,8 @@ function ChatScreen(): React.JSX.Element {
       }
       trigger(HapticFeedbackTypes.impactMedium);
       scrollToBottom();
-      getBedrockMessage(message[0]).then(currentMsg => {
+      // Use messageForAI for Bedrock, but message[0] for display
+      getBedrockMessage(messageForAI).then(currentMsg => {
         bedrockMessages.current.push(currentMsg);
         setChatStatus(ChatStatus.Running);
         setMessages(previousMessages => [

@@ -199,9 +199,23 @@ const webFetchTool: BuiltInTool = {
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      console.warn('web_fetch error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[web_fetch] Error fetching URL:', url, 'Error:', errorMessage);
+      
+      // Provide more helpful error messages
+      if (errorMessage.includes('aborted')) {
+        return {
+          error: `Request timeout after ${timeoutMs}ms`,
+        };
+      }
+      if (errorMessage.includes('Network request failed')) {
+        return {
+          error: 'Network error: Unable to reach the URL. Please check your internet connection.',
+        };
+      }
+      
       return {
-        error: String(error),
+        error: `Failed to fetch: ${errorMessage}`,
       };
     }
   },
