@@ -840,7 +840,7 @@ function ChatScreen(): React.JSX.Element {
 
       // Prepare message for AI (with tools if needed)
       let messageForAI = message[0];
-      
+
       // Add MCP tools to message if enabled and in text mode (only once per conversation)
       if (
         modeRef.current === ChatMode.Text &&
