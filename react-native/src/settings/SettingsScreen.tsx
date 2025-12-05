@@ -92,7 +92,7 @@ import {
   getDefaultApiKeyModels,
   VoiceIDList,
 } from '../storage/Constants.ts';
-import CustomTextInput from './CustomTextInput.tsx';
+import CustomTextInput from './CustomTextInput';
 import { requestAllOllamaModels } from '../api/ollama-api.ts';
 import TabButton from './TabButton';
 import { useAppContext } from '../history/AppProvider.tsx';

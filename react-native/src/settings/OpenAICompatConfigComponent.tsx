@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { OpenAICompatConfig } from '../types/Chat.ts';
-import CustomTextInput from './CustomTextInput.tsx';
+import CustomTextInput from './CustomTextInput';
 import { useTheme, ColorScheme } from '../theme';
 
 interface OpenAICompatConfigComponentProps {
