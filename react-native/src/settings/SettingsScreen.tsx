@@ -56,7 +56,16 @@ import {
   saveBedrockApiKey,
   generateOpenAICompatModels,
   getOpenAICompatConfigs,
+  getMCPEnabled,
+  setMCPEnabled,
+  getMCPServerUrl,
+  setMCPServerUrl,
+  getMCPApiKey,
+  setMCPApiKey,
+  getMCPMaxIterations,
+  setMCPMaxIterations,
 } from '../storage/StorageUtils.ts';
+import { refreshMCPTools } from '../mcp/MCPService';
 import { CustomHeaderRightButton } from '../chat/component/CustomHeaderRightButton.tsx';
 import { RouteParamList } from '../types/RouteTypes.ts';
 import { requestAllModels, requestUpgradeInfo } from '../api/bedrock-api.ts';
@@ -134,6 +143,10 @@ function SettingsScreen(): React.JSX.Element {
   const [bedrockConfigMode, setBedrockConfigMode] =
     useState(getBedrockConfigMode);
   const [bedrockApiKey, setBedrockApiKey] = useState(getBedrockApiKey);
+  const [mcpEnabled, setMcpEnabled] = useState(getMCPEnabled);
+  const [mcpServerUrl, setMcpServerUrl] = useState(getMCPServerUrl);
+  const [mcpApiKey, setMcpApiKey] = useState(getMCPApiKey);
+  const [mcpMaxIterations, setMcpMaxIterations] = useState(getMCPMaxIterations);
   const { sendEvent } = useAppContext();
   const sendEventRef = useRef(sendEvent);
   const openAICompatConfigsRef = useRef(openAICompatConfigs);
@@ -746,6 +759,67 @@ function SettingsScreen(): React.JSX.Element {
             }
           />
         </TouchableOpacity>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>MCP Integration</Text>
+        </View>
+        <View style={styles.versionContainer}>
+          <Text style={styles.label}>Enable MCP</Text>
+          <Switch
+            value={mcpEnabled}
+            onValueChange={value => {
+              setMcpEnabled(value);
+              setMCPEnabled(value);
+            }}
+          />
+        </View>
+        {mcpEnabled && (
+          <>
+            <CustomTextInput
+              label="MCP Server URL"
+              value={mcpServerUrl}
+              onChangeText={text => {
+                setMcpServerUrl(text);
+                setMCPServerUrl(text);
+              }}
+              placeholder="http://localhost:3000"
+            />
+            <CustomTextInput
+              label="MCP API Key (Optional)"
+              value={mcpApiKey}
+              onChangeText={text => {
+                setMcpApiKey(text);
+                setMCPApiKey(text);
+              }}
+              placeholder="Enter API key if required"
+              secureTextEntry
+            />
+            <CustomTextInput
+              label="Max Tool Call Iterations"
+              value={String(mcpMaxIterations)}
+              onChangeText={text => {
+                const num = parseInt(text, 10);
+                if (!isNaN(num) && num > 0 && num <= 10) {
+                  setMcpMaxIterations(num);
+                  setMCPMaxIterations(num);
+                }
+              }}
+              placeholder="2"
+              keyboardType="numeric"
+            />
+            <TouchableOpacity
+              style={styles.versionContainer}
+              onPress={() => {
+                refreshMCPTools();
+                if (Platform.OS === 'web') {
+                  alert('MCP tools refreshed');
+                } else {
+                  Alert.alert('Success', 'MCP tools refreshed');
+                }
+              }}>
+              <Text style={styles.label}>Refresh MCP Tools</Text>
+            </TouchableOpacity>
+          </>
+        )}
         <TouchableOpacity
           style={[styles.versionContainer, styles.dangerButton]}
           onPress={() => {
@@ -939,9 +1013,22 @@ const createStyles = (colors: ColorScheme) =>
     dangerButton: {
       borderColor: '#ff3b30',
       borderWidth: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      paddingBottom: 12,
     },
     dangerText: {
       color: '#ff3b30',
+    },
+    sectionHeader: {
+      marginTop: 20,
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
     },
     configSwitchContainer: {
       flexDirection: 'row',

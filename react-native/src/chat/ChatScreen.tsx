@@ -128,6 +128,8 @@ function ChatScreen(): React.JSX.Element {
   const textInputViewRef = useRef<TextInput>(null);
   const sessionIdRef = useRef(initialSessionId || getSessionId() + 1);
   const isCanceled = useRef(false);
+  const mcpIterationCount = useRef(0);
+  const mcpToolsAdded = useRef(false);
   const { sendEvent, event, drawerType } = useAppContext();
   const sendEventRef = useRef(sendEvent);
   const inputTextRef = useRef('');
@@ -628,8 +630,142 @@ function ChatScreen(): React.JSX.Element {
               });
             }
           };
-          const setComplete = () => {
+          const setComplete = async () => {
             trigger(HapticFeedbackTypes.notificationSuccess);
+
+            // Check for tool calls in text mode
+            if (modeRef.current === ChatMode.Text && !needStop) {
+              const { detectToolCall, executeToolCall } = await import(
+                '../mcp/MCPService'
+              );
+              const { getMCPMaxIterations } = await import(
+                '../storage/StorageUtils'
+              );
+              const toolCall = detectToolCall(msg);
+              const maxIterations = getMCPMaxIterations();
+
+              if (
+                toolCall.hasToolCall &&
+                toolCall.toolName &&
+                toolCall.toolArgs &&
+                mcpIterationCount.current < maxIterations
+              ) {
+                mcpIterationCount.current += 1;
+
+                // Show tool execution status
+                setMessages(prevMessages => {
+                  const newMessages = [...prevMessages];
+                  newMessages[0] = {
+                    ...prevMessages[0],
+                    text:
+                      msg +
+                      '\n\n🔧 Executing tool: ' +
+                      toolCall.toolName +
+                      '... (iteration ' +
+                      mcpIterationCount.current +
+                      '/' +
+                      maxIterations +
+                      ')',
+                  };
+                  return newMessages;
+                });
+
+                // Execute tool with error handling
+                try {
+                  const toolResult = await executeToolCall(
+                    toolCall.toolName,
+                    toolCall.toolArgs
+                  );
+
+                  // Check if tool execution failed
+                  if (!toolResult.success) {
+                    // Tool failed, show error and stop
+                    setMessages(prevMessages => {
+                      const newMessages = [...prevMessages];
+                      newMessages[0] = {
+                        ...prevMessages[0],
+                        text:
+                          msg +
+                          '\n\n❌ Tool execution failed: ' +
+                          toolCall.toolName +
+                          '\n' +
+                          (toolResult.error || 'Unknown error'),
+                      };
+                      return newMessages;
+                    });
+                    setChatStatus(ChatStatus.Complete);
+                    return;
+                  }
+
+                  // Send tool result as new user message (hidden from UI)
+                  const toolResultForAI: SwiftChatMessage = {
+                    _id: uuid.v4(),
+                    text: toolResult.data || '',
+                    createdAt: new Date(),
+                    user: { _id: 1 },
+                  };
+
+                  // Update AI message to show tool execution completed
+                  setMessages(prevMessages => {
+                    const newMessages = [...prevMessages];
+                    newMessages[0] = {
+                      ...prevMessages[0],
+                      text:
+                        msg +
+                        '\n\n✅ Tool executed: ' +
+                        toolCall.toolName +
+                        '. Generating response...',
+                    };
+                    return newMessages;
+                  });
+
+                  // Prepare for next AI call with tool result (don't add to UI messages)
+                  getBedrockMessage(toolResultForAI).then(currentMsg => {
+                    bedrockMessages.current.push(currentMsg);
+                    setChatStatus(ChatStatus.Running);
+                    setMessages(previousMessages => [
+                      createBotMessage(modeRef.current),
+                      ...previousMessages,
+                    ]);
+                  });
+
+                  return; // Don't set complete yet, wait for final AI response
+                } catch (error) {
+                  // Unexpected error
+                  setMessages(prevMessages => {
+                    const newMessages = [...prevMessages];
+                    newMessages[0] = {
+                      ...prevMessages[0],
+                      text:
+                        msg +
+                        '\n\n❌ Unexpected error executing tool: ' +
+                        String(error),
+                    };
+                    return newMessages;
+                  });
+                  setChatStatus(ChatStatus.Complete);
+                  return;
+                }
+              } else if (
+                toolCall.hasToolCall &&
+                mcpIterationCount.current >= maxIterations
+              ) {
+                // Max iterations reached
+                setMessages(prevMessages => {
+                  const newMessages = [...prevMessages];
+                  newMessages[0] = {
+                    ...prevMessages[0],
+                    text:
+                      msg +
+                      '\n\n⚠️ Maximum tool call iterations (' +
+                      maxIterations +
+                      ') reached. Stopping tool execution.',
+                  };
+                  return newMessages;
+                });
+              }
+            }
+
             setChatStatus(ChatStatus.Complete);
           };
           if (modeRef.current === ChatMode.Text) {
@@ -658,10 +794,19 @@ function ChatScreen(): React.JSX.Element {
   }, [messages]);
 
   // handle onSend
-  const onSend = useCallback((message: SwiftChatMessage[] = []) => {
+  const onSend = useCallback(async (message: SwiftChatMessage[] = []) => {
     // Reset user scroll state when sending a new message
     setUserScrolled(false);
     setShowSystemPrompt(modeRef.current === ChatMode.Image);
+
+    // Reset MCP iteration counter for new user message
+    mcpIterationCount.current = 0;
+
+    // Reset tools added flag if starting new conversation
+    if (messagesRef.current.length === 0) {
+      mcpToolsAdded.current = false;
+    }
+
     const files = selectedFilesRef.current;
     if (!isAllFileReady(files)) {
       showInfo('please wait for all videos to be ready');
@@ -692,6 +837,18 @@ function ChatScreen(): React.JSX.Element {
             systemPromptRef.current?.prompt + '\n' + message[0].text;
         }
       }
+
+      // Add MCP tools to message if enabled and in text mode (only once per conversation)
+      if (
+        modeRef.current === ChatMode.Text &&
+        !mcpToolsAdded.current &&
+        messagesRef.current.length === 0
+      ) {
+        const { addToolsToMessage } = await import('../mcp/MCPService');
+        message[0].text = await addToolsToMessage(message[0].text);
+        mcpToolsAdded.current = true;
+      }
+
       if (selectedFilesRef.current.length > 0) {
         message[0].image = JSON.stringify(selectedFilesRef.current);
         setSelectedFiles([]);

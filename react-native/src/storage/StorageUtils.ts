@@ -48,6 +48,10 @@ const hapticEnabledKey = keyPrefix + 'hapticEnabled';
 const apiUrlKey = keyPrefix + 'apiUrlKey';
 const apiKeyTag = keyPrefix + 'apiKeyTag';
 const ollamaApiUrlKey = keyPrefix + 'ollamaApiUrlKey';
+const mcpEnabledKey = keyPrefix + 'mcpEnabled';
+const mcpServerUrlKey = keyPrefix + 'mcpServerUrl';
+const mcpApiKeyKey = keyPrefix + 'mcpApiKey';
+const mcpMaxIterationsKey = keyPrefix + 'mcpMaxIterations';
 const ollamaApiKeyTag = keyPrefix + 'ollamaApiKeyTag';
 const deepSeekApiKeyTag = keyPrefix + 'deepSeekApiKeyTag';
 const openAIApiKeyTag = keyPrefix + 'openAIApiKeyTag';
@@ -163,7 +167,7 @@ export function deleteMessagesBySessionId(sessionId: number) {
 export function deleteAllMessages() {
   const chatList = getMessageList();
   chatList.forEach(chat => {
-    storage.delete(sessionIdPrefix + chat.sessionId);
+    storage.delete(sessionIdPrefix + chat.id);
   });
   storage.delete(messageListKey);
   storage.delete(currentSessionIdKey);
@@ -812,4 +816,36 @@ export function generateOpenAICompatModels(
   });
 
   return openAICompatModelList;
+}
+
+export function getMCPEnabled(): boolean {
+  return storage.getBoolean(mcpEnabledKey) ?? false;
+}
+
+export function setMCPEnabled(enabled: boolean) {
+  storage.set(mcpEnabledKey, enabled);
+}
+
+export function getMCPServerUrl(): string {
+  return storage.getString(mcpServerUrlKey) ?? '';
+}
+
+export function setMCPServerUrl(url: string) {
+  storage.set(mcpServerUrlKey, url);
+}
+
+export function getMCPApiKey(): string {
+  return storage.getString(mcpApiKeyKey) ?? '';
+}
+
+export function setMCPApiKey(key: string) {
+  storage.set(mcpApiKeyKey, key);
+}
+
+export function getMCPMaxIterations(): number {
+  return storage.getNumber(mcpMaxIterationsKey) ?? 2;
+}
+
+export function setMCPMaxIterations(iterations: number) {
+  storage.set(mcpMaxIterationsKey, iterations);
 }
