@@ -25,7 +25,7 @@ import {
   ContentProcessingMode,
   getAllModels,
 } from '../storage/StorageUtils';
-import { CustomTextInput } from '../chat/component/CustomTextInput';
+import CustomTextInput from './CustomTextInput';
 import { Model } from '../types/Chat';
 
 const WebFetchSettingsScreen = () => {
