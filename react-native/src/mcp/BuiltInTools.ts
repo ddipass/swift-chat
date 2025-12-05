@@ -199,22 +199,16 @@ const webFetchTool: BuiltInTool = {
         processedBy = 'regex';
       }
 
-        const maxLength = getFetchMaxContentLength();
-        const truncated = cleanText.length > maxLength;
+      const maxLength = getFetchMaxContentLength();
+      const truncated = cleanText.length > maxLength;
 
-        return {
-          content: cleanText.substring(0, maxLength),
-          type: 'text',
-          url,
-          truncated,
-          originalLength: cleanText.length,
-          processedBy,
-        };
-      }
-
-      clearTimeout(timeoutId);
       return {
-        error: 'Unsupported content type: ' + contentType,
+        content: cleanText.substring(0, maxLength),
+        type: 'text',
+        url,
+        truncated,
+        originalLength: cleanText.length,
+        processedBy,
       };
     } catch (error) {
       clearTimeout(timeoutId);
