@@ -155,30 +155,49 @@ const webFetchTool: BuiltInTool = {
 
       const contentType = response.headers.get('content-type') || '';
 
-      if (contentType.includes('application/json')) {
-        const json = await response.json();
+      // Try to read response body with error handling for React Native fetch issues
+      let responseText: string;
+      try {
+        if (contentType.includes('application/json')) {
+          const json = await response.json();
+          clearTimeout(timeoutId);
+          return { content: JSON.stringify(json, null, 2), type: 'json' };
+        }
+
+        if (contentType.includes('text/')) {
+          responseText = await response.text();
+        } else {
+          clearTimeout(timeoutId);
+          return {
+            error: 'Unsupported content type: ' + contentType,
+          };
+        }
+      } catch (readError) {
         clearTimeout(timeoutId);
-        return { content: JSON.stringify(json, null, 2), type: 'json' };
+        const readErrorMsg =
+          readError instanceof Error ? readError.message : String(readError);
+        console.error('[web_fetch] Error reading response body:', readErrorMsg);
+        return {
+          error: `Failed to read response: ${readErrorMsg}. This may be due to React Native fetch limitations.`,
+        };
       }
 
-      if (contentType.includes('text/')) {
-        const text = await response.text();
-        clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-        // Get processing mode
-        const mode = getContentProcessingMode();
-        let cleanText: string;
-        let processedBy: string;
+      // Get processing mode
+      const mode = getContentProcessingMode();
+      let cleanText: string;
+      let processedBy: string;
 
-        if (mode === 'ai_summary') {
-          // AI summarization
-          cleanText = await summarizeHTMLWithAI(text, url);
-          processedBy = 'ai_summary';
-        } else {
-          // Regex cleaning
-          cleanText = cleanHTMLWithRegex(text);
-          processedBy = 'regex';
-        }
+      if (mode === 'ai_summary') {
+        // AI summarization
+        cleanText = await summarizeHTMLWithAI(responseText, url);
+        processedBy = 'ai_summary';
+      } else {
+        // Regex cleaning
+        cleanText = cleanHTMLWithRegex(responseText);
+        processedBy = 'regex';
+      }
 
         const maxLength = getFetchMaxContentLength();
         const truncated = cleanText.length > maxLength;
