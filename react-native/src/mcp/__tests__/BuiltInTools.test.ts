@@ -11,7 +11,7 @@ jest.mock('react-native-blob-util', () => ({
           status: 200,
           headers: { 'content-type': 'text/html' },
         }),
-        text: () => '<html><body><h1>Test</h1><p>Content</p></body></html>',
+        data: '<html><body><h1>Test</h1><p>Content</p></body></html>',
       })),
     })),
   },

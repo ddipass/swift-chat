@@ -151,7 +151,7 @@ const webFetchTool: BuiltInTool = {
         headers['Content-Type'] ||
         ''
       ).toLowerCase();
-      const responseText = response.text();
+      const responseText = response.data;
 
       if (contentType.includes('application/json')) {
         const json = JSON.parse(responseText);
