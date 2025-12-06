@@ -177,7 +177,7 @@ const WebFetchSettingsScreen = () => {
               placeholder="Enter summary prompt"
               multiline
               numberOfLines={8}
-              placeholderTextColor={colors.secondaryText}
+              placeholderTextColor={colors.textSecondary}
             />
           </>
         )}
@@ -233,12 +233,12 @@ const createStyles = (colors: ColorScheme) =>
     },
     description: {
       fontSize: 14,
-      color: colors.secondaryText,
+      color: colors.textSecondary,
       lineHeight: 20,
     },
     hint: {
       fontSize: 12,
-      color: colors.secondaryText,
+      color: colors.textSecondary,
       marginTop: -8,
       marginBottom: 16,
       marginLeft: 4,
@@ -284,7 +284,7 @@ const createStyles = (colors: ColorScheme) =>
     },
     radioDescription: {
       fontSize: 14,
-      color: colors.secondaryText,
+      color: colors.textSecondary,
       lineHeight: 18,
     },
     label: {
@@ -308,7 +308,7 @@ const createStyles = (colors: ColorScheme) =>
     },
     modelArrow: {
       fontSize: 12,
-      color: colors.secondaryText,
+      color: colors.textSecondary,
     },
     modelPicker: {
       backgroundColor: colors.inputBackground,

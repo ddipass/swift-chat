@@ -281,7 +281,7 @@ const createStyles = (colors: ColorScheme) =>
     },
     description: {
       fontSize: 14,
-      color: colors.secondaryText,
+      color: colors.textSecondary,
       lineHeight: 20,
     },
     settingRow: {
@@ -319,12 +319,12 @@ const createStyles = (colors: ColorScheme) =>
     },
     serverUrl: {
       fontSize: 14,
-      color: colors.secondaryText,
+      color: colors.textSecondary,
       marginBottom: 4,
     },
     serverApiKey: {
       fontSize: 12,
-      color: colors.secondaryText,
+      color: colors.textSecondary,
       marginBottom: 8,
     },
     serverActions: {
@@ -348,7 +348,7 @@ const createStyles = (colors: ColorScheme) =>
       marginTop: 8,
     },
     addButtonText: {
-      color: colors.buttonText,
+      color: '#ffffff',
       fontSize: 16,
       fontWeight: '600',
     },
@@ -369,7 +369,7 @@ const createStyles = (colors: ColorScheme) =>
       paddingHorizontal: 16,
     },
     cancelButtonText: {
-      color: colors.secondaryText,
+      color: colors.textSecondary,
       fontSize: 16,
       fontWeight: '500',
     },
@@ -380,7 +380,7 @@ const createStyles = (colors: ColorScheme) =>
       borderRadius: 6,
     },
     saveButtonText: {
-      color: colors.buttonText,
+      color: '#ffffff',
       fontSize: 16,
       fontWeight: '600',
     },
@@ -405,7 +405,7 @@ const createStyles = (colors: ColorScheme) =>
     },
     infoText: {
       fontSize: 14,
-      color: colors.secondaryText,
+      color: colors.textSecondary,
       lineHeight: 20,
     },
   });
