@@ -99,17 +99,22 @@ const MCPSettingsScreen = () => {
         setServers(servers.filter(s => s.id !== serverId));
       }
     } else {
-      Alert.Alert.alert("Error", 'Remove Server', `Remove server "${serverName}"?`, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            removeMCPServer(serverId);
-            setServers(servers.filter(s => s.id !== serverId));
+      Alert.Alert.alert(
+        'Error',
+        'Remove Server',
+        `Remove server "${serverName}"?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: () => {
+              removeMCPServer(serverId);
+              setServers(servers.filter(s => s.id !== serverId));
+            },
           },
-        },
-      ]);
+        ]
+      );
     }
   };
 
@@ -119,154 +124,157 @@ const MCPSettingsScreen = () => {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}>
+        style={styles.keyboardView}>
         <ScrollView style={styles.container}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MCP Integration</Text>
-          <Text style={styles.description}>
-            Model Context Protocol allows AI to use external tools and services
-          </Text>
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>MCP Integration</Text>
+            <Text style={styles.description}>
+              Model Context Protocol allows AI to use external tools and
+              services
+            </Text>
+          </View>
 
-        <View style={styles.settingRow}>
-          <Text style={styles.label}>Enable MCP</Text>
-          <Switch
-            value={mcpEnabled}
-            onValueChange={value => {
-              setMcpEnabled(value);
-              setMCPEnabled(value);
-            }}
-          />
-        </View>
-
-        {mcpEnabled && (
-          <>
-            <CustomTextInput
-              label="Max Tool Call Iterations"
-              value={String(mcpMaxIterations)}
-              onChangeText={text => {
-                const num = parseInt(text, 10);
-                if (!isNaN(num) && num > 0 && num <= 10) {
-                  setMcpMaxIterations(num);
-                  setMCPMaxIterations(num);
-                }
+          <View style={styles.settingRow}>
+            <Text style={styles.label}>Enable MCP</Text>
+            <Switch
+              value={mcpEnabled}
+              onValueChange={value => {
+                setMcpEnabled(value);
+                setMCPEnabled(value);
               }}
-              placeholder="2"
-              keyboardType="numeric"
             />
+          </View>
 
-            <View style={styles.divider} />
+          {mcpEnabled && (
+            <>
+              <CustomTextInput
+                label="Max Tool Call Iterations"
+                value={String(mcpMaxIterations)}
+                onChangeText={text => {
+                  const num = parseInt(text, 10);
+                  if (!isNaN(num) && num > 0 && num <= 10) {
+                    setMcpMaxIterations(num);
+                    setMCPMaxIterations(num);
+                  }
+                }}
+                placeholder="2"
+                keyboardType="numeric"
+              />
 
-            <Text style={styles.sectionSubtitle}>MCP Servers</Text>
+              <View style={styles.divider} />
 
-            {servers.length === 0 && !showAddServer && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>No MCP Servers</Text>
-                <Text style={styles.emptyDescription}>
-                  Add an MCP server to enable external tools and services
+              <Text style={styles.sectionSubtitle}>MCP Servers</Text>
+
+              {servers.length === 0 && !showAddServer && (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>No MCP Servers</Text>
+                  <Text style={styles.emptyDescription}>
+                    Add an MCP server to enable external tools and services
+                  </Text>
+                </View>
+              )}
+
+              {servers.map(server => (
+                <View key={server.id} style={styles.serverCard}>
+                  <View style={styles.serverHeader}>
+                    <Text style={styles.serverName}>{server.name}</Text>
+                    <Switch
+                      value={server.enabled}
+                      onValueChange={enabled =>
+                        handleToggleServer(server.id, enabled)
+                      }
+                    />
+                  </View>
+                  <Text style={styles.serverUrl}>{server.url}</Text>
+                  {server.apiKey && (
+                    <Text style={styles.serverApiKey}>
+                      API Key: {server.apiKey.substring(0, 8)}••••
+                    </Text>
+                  )}
+                  <View style={styles.serverActions}>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        handleRemoveServer(server.id, server.name)
+                      }>
+                      <Text style={styles.removeButtonText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+
+              {!showAddServer && (
+                <TouchableOpacity
+                  style={styles.addButton}
+                  activeOpacity={0.7}
+                  onPress={() => setShowAddServer(true)}>
+                  <Text style={styles.addButtonText}>+ Add Server</Text>
+                </TouchableOpacity>
+              )}
+
+              {showAddServer && (
+                <View style={styles.addServerForm}>
+                  <CustomTextInput
+                    label="Server Name"
+                    value={newServerName}
+                    onChangeText={setNewServerName}
+                    placeholder="My MCP Server"
+                  />
+                  <CustomTextInput
+                    label="Server URL"
+                    value={newServerUrl}
+                    onChangeText={setNewServerUrl}
+                    placeholder="http://localhost:3000"
+                    autoCapitalize="none"
+                  />
+                  <CustomTextInput
+                    label="API Key (Optional)"
+                    value={newServerApiKey}
+                    onChangeText={setNewServerApiKey}
+                    placeholder="Enter API key if required"
+                    secureTextEntry
+                  />
+                  <View style={styles.formActions}>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setShowAddServer(false);
+                        setNewServerName('');
+                        setNewServerUrl('');
+                        setNewServerApiKey('');
+                      }}>
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.saveButton}
+                      activeOpacity={0.7}
+                      onPress={handleAddServer}>
+                      <Text style={styles.saveButtonText}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoSection}>
+                <Text style={styles.infoTitle}>Built-in Tools:</Text>
+                <Text style={styles.infoText}>
+                  • web_fetch - Fetch web content
+                </Text>
+                <Text style={styles.infoTitleWithMargin}>External Tools:</Text>
+                <Text style={styles.infoText}>
+                  {servers.filter(s => s.enabled).length > 0
+                    ? `Connected to ${
+                        servers.filter(s => s.enabled).length
+                      } server(s)`
+                    : 'No servers connected'}
                 </Text>
               </View>
-            )}
-
-            {servers.map(server => (
-              <View key={server.id} style={styles.serverCard}>
-                <View style={styles.serverHeader}>
-                  <Text style={styles.serverName}>{server.name}</Text>
-                  <Switch
-                    value={server.enabled}
-                    onValueChange={enabled =>
-                      handleToggleServer(server.id, enabled)
-                    }
-                  />
-                </View>
-                <Text style={styles.serverUrl}>{server.url}</Text>
-                {server.apiKey && (
-                  <Text style={styles.serverApiKey}>
-                    API Key: {server.apiKey.substring(0, 8)}••••
-                  </Text>
-                )}
-                <View style={styles.serverActions}>
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    activeOpacity={0.7}
-                    onPress={() => handleRemoveServer(server.id, server.name)}>
-                    <Text style={styles.removeButtonText}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-
-            {!showAddServer && (
-              <TouchableOpacity
-                style={styles.addButton}
-                activeOpacity={0.7}
-                onPress={() => setShowAddServer(true)}>
-                <Text style={styles.addButtonText}>+ Add Server</Text>
-              </TouchableOpacity>
-            )}
-
-            {showAddServer && (
-              <View style={styles.addServerForm}>
-                <CustomTextInput
-                  label="Server Name"
-                  value={newServerName}
-                  onChangeText={setNewServerName}
-                  placeholder="My MCP Server"
-                />
-                <CustomTextInput
-                  label="Server URL"
-                  value={newServerUrl}
-                  onChangeText={setNewServerUrl}
-                  placeholder="http://localhost:3000"
-                  autoCapitalize="none"
-                />
-                <CustomTextInput
-                  label="API Key (Optional)"
-                  value={newServerApiKey}
-                  onChangeText={setNewServerApiKey}
-                  placeholder="Enter API key if required"
-                  secureTextEntry
-                />
-                <View style={styles.formActions}>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setShowAddServer(false);
-                      setNewServerName('');
-                      setNewServerUrl('');
-                      setNewServerApiKey('');
-                    }}>
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.saveButton}
-                    activeOpacity={0.7}
-                    onPress={handleAddServer}>
-                    <Text style={styles.saveButtonText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoSection}>
-              <Text style={styles.infoTitle}>Built-in Tools:</Text>
-              <Text style={styles.infoText}>
-                • web_fetch - Fetch web content
-              </Text>
-              <Text style={styles.infoTitleWithMargin}>External Tools:</Text>
-              <Text style={styles.infoText}>
-                {servers.filter(s => s.enabled).length > 0
-                  ? `Connected to ${
-                      servers.filter(s => s.enabled).length
-                    } server(s)`
-                  : 'No servers connected'}
-              </Text>
-            </View>
-          </>
-        )}
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -278,6 +286,9 @@ const createStyles = (colors: ColorScheme) =>
     safeArea: {
       flex: 1,
       backgroundColor: colors.background,
+    },
+    keyboardView: {
+      flex: 1,
     },
     container: {
       flex: 1,
