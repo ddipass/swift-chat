@@ -25,6 +25,16 @@ import {
 } from '../storage/StorageUtils';
 import CustomTextInput from './CustomTextInput';
 
+// Spacing system
+const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+};
+
 const MCPSettingsScreen = () => {
   const { colors } = useTheme();
   const [mcpEnabled, setMcpEnabled] = useState(getMCPEnabled());
@@ -43,6 +53,26 @@ const MCPSettingsScreen = () => {
         alert('Please enter server name and URL');
       } else {
         Alert.alert('Error', 'Please enter server name and URL');
+      }
+      return;
+    }
+
+    // Check name length
+    if (newServerName.length < 2 || newServerName.length > 50) {
+      if (Platform.OS === 'web') {
+        alert('Server name must be 2-50 characters');
+      } else {
+        Alert.alert('Error', 'Server name must be 2-50 characters');
+      }
+      return;
+    }
+
+    // Check for duplicate name
+    if (servers.some(s => s.name === newServerName)) {
+      if (Platform.OS === 'web') {
+        alert('Server name already exists');
+      } else {
+        Alert.alert('Error', 'Server name already exists');
       }
       return;
     }
@@ -66,6 +96,16 @@ const MCPSettingsScreen = () => {
         alert('Invalid URL format');
       } else {
         Alert.alert('Error', 'Invalid URL format');
+      }
+      return;
+    }
+
+    // Check for duplicate URL
+    if (servers.some(s => s.url === newServerUrl)) {
+      if (Platform.OS === 'web') {
+        alert('Server URL already exists');
+      } else {
+        Alert.alert('Error', 'Server URL already exists');
       }
       return;
     }
@@ -177,7 +217,14 @@ const MCPSettingsScreen = () => {
               {servers.map(server => (
                 <View key={server.id} style={styles.serverCard}>
                   <View style={styles.serverHeader}>
-                    <Text style={styles.serverName}>{server.name}</Text>
+                    <View style={styles.serverNameContainer}>
+                      <Text style={styles.serverName}>{server.name}</Text>
+                      {server.enabled && (
+                        <View style={styles.statusBadge}>
+                          <Text style={styles.statusText}>● Active</Text>
+                        </View>
+                      )}
+                    </View>
                     <Switch
                       value={server.enabled}
                       onValueChange={enabled =>
@@ -292,22 +339,22 @@ const createStyles = (colors: ColorScheme) =>
     },
     container: {
       flex: 1,
-      padding: 20,
+      padding: spacing.lg,
     },
     section: {
-      marginBottom: 24,
+      marginBottom: spacing.xl,
     },
     sectionTitle: {
       fontSize: 24,
       fontWeight: 'bold',
       color: colors.text,
-      marginBottom: 8,
+      marginBottom: spacing.sm,
     },
     sectionSubtitle: {
       fontSize: 18,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 16,
+      marginBottom: spacing.lg,
     },
     description: {
       fontSize: 14,
@@ -318,8 +365,8 @@ const createStyles = (colors: ColorScheme) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 12,
-      marginBottom: 16,
+      paddingVertical: spacing.md,
+      marginBottom: spacing.lg,
     },
     label: {
       fontSize: 16,
@@ -328,34 +375,52 @@ const createStyles = (colors: ColorScheme) =>
     divider: {
       height: 1,
       backgroundColor: colors.border,
-      marginVertical: 24,
+      marginVertical: spacing.xl,
     },
     serverCard: {
       backgroundColor: colors.inputBackground,
-      borderRadius: 8,
-      padding: 16,
-      marginBottom: 12,
+      borderRadius: spacing.sm,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
     },
     serverHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: spacing.sm,
+    },
+    serverNameContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      marginRight: spacing.md,
     },
     serverName: {
       fontSize: 16,
       fontWeight: '600',
       color: colors.text,
     },
+    statusBadge: {
+      marginLeft: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      backgroundColor: colors.success + '20',
+      borderRadius: 4,
+    },
+    statusText: {
+      fontSize: 11,
+      color: colors.success,
+      fontWeight: '500',
+    },
     serverUrl: {
       fontSize: 14,
       color: colors.textSecondary,
-      marginBottom: 4,
+      marginBottom: spacing.xs,
     },
     serverApiKey: {
       fontSize: 12,
       color: colors.textSecondary,
-      marginBottom: 8,
+      marginBottom: spacing.sm,
     },
     serverActions: {
       flexDirection: 'row',
@@ -363,7 +428,7 @@ const createStyles = (colors: ColorScheme) =>
     },
     removeButton: {
       paddingVertical: 6,
-      paddingHorizontal: 12,
+      paddingHorizontal: spacing.md,
     },
     removeButtonText: {
       color: colors.error || '#FF3B30',
@@ -372,10 +437,10 @@ const createStyles = (colors: ColorScheme) =>
     },
     addButton: {
       backgroundColor: colors.primary,
-      padding: 16,
-      borderRadius: 8,
+      padding: spacing.lg,
+      borderRadius: spacing.sm,
       alignItems: 'center',
-      marginTop: 8,
+      marginTop: spacing.sm,
     },
     addButtonText: {
       color: '#ffffff',
@@ -384,19 +449,19 @@ const createStyles = (colors: ColorScheme) =>
     },
     addServerForm: {
       backgroundColor: colors.inputBackground,
-      borderRadius: 8,
-      padding: 16,
-      marginTop: 8,
+      borderRadius: spacing.sm,
+      padding: spacing.lg,
+      marginTop: spacing.sm,
     },
     formActions: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
-      marginTop: 16,
-      gap: 12,
+      marginTop: spacing.lg,
+      gap: spacing.md,
     },
     cancelButton: {
-      paddingVertical: 8,
-      paddingHorizontal: 16,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
     },
     cancelButtonText: {
       color: colors.textSecondary,
@@ -405,8 +470,8 @@ const createStyles = (colors: ColorScheme) =>
     },
     saveButton: {
       backgroundColor: colors.primary,
-      paddingVertical: 8,
-      paddingHorizontal: 16,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
       borderRadius: 6,
     },
     saveButtonText: {
@@ -415,23 +480,23 @@ const createStyles = (colors: ColorScheme) =>
       fontWeight: '600',
     },
     infoSection: {
-      marginTop: 24,
-      padding: 16,
+      marginTop: spacing.xl,
+      padding: spacing.lg,
       backgroundColor: colors.inputBackground,
-      borderRadius: 8,
+      borderRadius: spacing.sm,
     },
     infoTitle: {
       fontSize: 14,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 8,
+      marginBottom: spacing.sm,
     },
     infoTitleWithMargin: {
       fontSize: 14,
       fontWeight: '600',
       color: colors.text,
-      marginTop: 16,
-      marginBottom: 8,
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
     },
     infoText: {
       fontSize: 14,
@@ -439,17 +504,17 @@ const createStyles = (colors: ColorScheme) =>
       lineHeight: 20,
     },
     emptyState: {
-      padding: 32,
+      padding: spacing.xxl,
       alignItems: 'center',
       backgroundColor: colors.surface,
-      borderRadius: 8,
-      marginBottom: 16,
+      borderRadius: spacing.sm,
+      marginBottom: spacing.lg,
     },
     emptyTitle: {
       fontSize: 16,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 8,
+      marginBottom: spacing.sm,
     },
     emptyDescription: {
       fontSize: 14,
