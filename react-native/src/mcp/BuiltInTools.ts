@@ -7,7 +7,6 @@ import {
   getFetchMaxContentLength,
   getContentProcessingMode,
   getAISummaryPrompt,
-  getSummaryModel,
   getRemoveElements,
 } from '../storage/StorageUtils';
 
@@ -55,10 +54,10 @@ function cleanHTMLWithRegex(html: string): string {
 async function summarizeHTMLWithAI(html: string, url: string): Promise<string> {
   try {
     const prompt = getAISummaryPrompt();
-    const model = getSummaryModel();
 
     // Import bedrock-api dynamically to avoid circular dependency
     const { invokeBedrockWithCallBack } = await import('../api/bedrock-api');
+    const { ChatMode } = await import('../types/Chat');
 
     // Limit HTML size to avoid token overflow
     const maxHtmlLength = 50000;
@@ -73,20 +72,18 @@ async function summarizeHTMLWithAI(html: string, url: string): Promise<string> {
           role: 'user',
           content: [
             {
-              type: 'text',
               text: `${prompt}\n\nURL: ${url}\n\nHTML:\n${truncatedHtml}`,
             },
           ],
         },
       ],
-      model,
-      (result, _complete) => {
+      ChatMode.Text,
+      { id: 0, name: 'Web Fetch', prompt: '', includeHistory: false },
+      () => false,
+      new AbortController(),
+      (result: string) => {
         summary += result;
-      },
-      undefined,
-      undefined,
-      undefined,
-      undefined
+      }
     );
 
     return summary;
@@ -117,7 +114,6 @@ const webFetchTool: BuiltInTool = {
   execute: async (args: Record<string, unknown>) => {
     const url = args.url as string;
 
-    // Validate URL
     if (!url || typeof url !== 'string') {
       return { error: 'Invalid URL: URL is required' };
     }
@@ -133,110 +129,66 @@ const webFetchTool: BuiltInTool = {
       return { error: 'Invalid URL format' };
     }
 
-    // Setup timeout
-    const controller = new AbortController();
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const RNFetchBlob = require('react-native-blob-util').default;
     const timeoutMs = getFetchTimeout();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'SwiftChat/1.0',
-        },
+      const response = await RNFetchBlob.config({
+        timeout: timeoutMs,
+      }).fetch('GET', url, {
+        'User-Agent': 'SwiftChat/1.0',
       });
 
-      if (!response.ok) {
-        clearTimeout(timeoutId);
-        return {
-          error: `HTTP ${response.status}: ${response.statusText}`,
-        };
+      const status = response.info().status;
+      if (status < 200 || status >= 400) {
+        return { error: `HTTP ${status}` };
       }
 
-      const contentType = response.headers.get('content-type') || '';
+      const headers = response.info().headers;
+      const contentType = (
+        headers['content-type'] ||
+        headers['Content-Type'] ||
+        ''
+      ).toLowerCase();
+      const responseText = response.text();
 
-      // Try to read response body with error handling for React Native fetch issues
-      let responseText: string;
-      try {
-        if (contentType.includes('application/json')) {
-          const json = await response.json();
-          clearTimeout(timeoutId);
-          return { content: JSON.stringify(json, null, 2), type: 'json' };
-        }
+      if (contentType.includes('application/json')) {
+        const json = JSON.parse(responseText);
+        return { content: JSON.stringify(json, null, 2), type: 'json' };
+      }
 
-        if (contentType.includes('text/')) {
-          responseText = await response.text();
+      if (contentType.includes('text/')) {
+        const mode = getContentProcessingMode();
+        let cleanText: string;
+        let processedBy: string;
+
+        if (mode === 'ai_summary') {
+          cleanText = await summarizeHTMLWithAI(responseText, url);
+          processedBy = 'ai_summary';
         } else {
-          clearTimeout(timeoutId);
-          return {
-            error: 'Unsupported content type: ' + contentType,
-          };
+          cleanText = cleanHTMLWithRegex(responseText);
+          processedBy = 'regex';
         }
-      } catch (readError) {
-        clearTimeout(timeoutId);
-        const readErrorMsg =
-          readError instanceof Error ? readError.message : String(readError);
-        console.error('[web_fetch] Error reading response body:', readErrorMsg);
+
+        const maxLength = getFetchMaxContentLength();
+        const truncated = cleanText.length > maxLength;
+
         return {
-          error: `Failed to read response: ${readErrorMsg}. This may be due to React Native fetch limitations.`,
+          content: cleanText.substring(0, maxLength),
+          type: 'text',
+          url,
+          truncated,
+          originalLength: cleanText.length,
+          processedBy,
         };
       }
 
-      clearTimeout(timeoutId);
-
-      // Get processing mode
-      const mode = getContentProcessingMode();
-      let cleanText: string;
-      let processedBy: string;
-
-      if (mode === 'ai_summary') {
-        // AI summarization
-        cleanText = await summarizeHTMLWithAI(responseText, url);
-        processedBy = 'ai_summary';
-      } else {
-        // Regex cleaning
-        cleanText = cleanHTMLWithRegex(responseText);
-        processedBy = 'regex';
-      }
-
-      const maxLength = getFetchMaxContentLength();
-      const truncated = cleanText.length > maxLength;
-
-      return {
-        content: cleanText.substring(0, maxLength),
-        type: 'text',
-        url,
-        truncated,
-        originalLength: cleanText.length,
-        processedBy,
-      };
+      return { error: 'Unsupported content type: ' + contentType };
     } catch (error) {
-      clearTimeout(timeoutId);
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(
-        '[web_fetch] Error fetching URL:',
-        url,
-        'Error:',
-        errorMessage
-      );
-
-      // Provide more helpful error messages
-      if (errorMessage.includes('aborted')) {
-        return {
-          error: `Request timeout after ${timeoutMs}ms`,
-        };
-      }
-      if (errorMessage.includes('Network request failed')) {
-        return {
-          error:
-            'Network error: Unable to reach the URL. Please check your internet connection.',
-        };
-      }
-
-      return {
-        error: `Failed to fetch: ${errorMessage}`,
-      };
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error('[web_fetch] Error:', errMsg);
+      return { error: `Failed to fetch: ${errMsg}` };
     }
   },
 };
