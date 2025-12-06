@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useTheme, ColorScheme } from '../theme';
 import {
@@ -98,7 +99,7 @@ const MCPSettingsScreen = () => {
         setServers(servers.filter(s => s.id !== serverId));
       }
     } else {
-      Alert.alert('Remove Server', `Remove server "${serverName}"?`, [
+      Alert.Alert.alert("Error", 'Remove Server', `Remove server "${serverName}"?`, [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
@@ -116,7 +117,10 @@ const MCPSettingsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}>
+        <ScrollView style={styles.container}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>MCP Integration</Text>
           <Text style={styles.description}>
@@ -155,6 +159,15 @@ const MCPSettingsScreen = () => {
 
             <Text style={styles.sectionSubtitle}>MCP Servers</Text>
 
+            {servers.length === 0 && !showAddServer && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyTitle}>No MCP Servers</Text>
+                <Text style={styles.emptyDescription}>
+                  Add an MCP server to enable external tools and services
+                </Text>
+              </View>
+            )}
+
             {servers.map(server => (
               <View key={server.id} style={styles.serverCard}>
                 <View style={styles.serverHeader}>
@@ -175,6 +188,7 @@ const MCPSettingsScreen = () => {
                 <View style={styles.serverActions}>
                   <TouchableOpacity
                     style={styles.removeButton}
+                    activeOpacity={0.7}
                     onPress={() => handleRemoveServer(server.id, server.name)}>
                     <Text style={styles.removeButtonText}>Remove</Text>
                   </TouchableOpacity>
@@ -185,6 +199,7 @@ const MCPSettingsScreen = () => {
             {!showAddServer && (
               <TouchableOpacity
                 style={styles.addButton}
+                activeOpacity={0.7}
                 onPress={() => setShowAddServer(true)}>
                 <Text style={styles.addButtonText}>+ Add Server</Text>
               </TouchableOpacity>
@@ -203,6 +218,7 @@ const MCPSettingsScreen = () => {
                   value={newServerUrl}
                   onChangeText={setNewServerUrl}
                   placeholder="http://localhost:3000"
+                  autoCapitalize="none"
                 />
                 <CustomTextInput
                   label="API Key (Optional)"
@@ -214,6 +230,7 @@ const MCPSettingsScreen = () => {
                 <View style={styles.formActions}>
                   <TouchableOpacity
                     style={styles.cancelButton}
+                    activeOpacity={0.7}
                     onPress={() => {
                       setShowAddServer(false);
                       setNewServerName('');
@@ -224,6 +241,7 @@ const MCPSettingsScreen = () => {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.saveButton}
+                    activeOpacity={0.7}
                     onPress={handleAddServer}>
                     <Text style={styles.saveButtonText}>Add</Text>
                   </TouchableOpacity>
@@ -249,7 +267,8 @@ const MCPSettingsScreen = () => {
             </View>
           </>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -406,6 +425,25 @@ const createStyles = (colors: ColorScheme) =>
     infoText: {
       fontSize: 14,
       color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    emptyState: {
+      padding: 32,
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      marginBottom: 16,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    emptyDescription: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
       lineHeight: 20,
     },
   });
