@@ -26,7 +26,37 @@ import {
   getAllModels,
 } from '../storage/StorageUtils';
 import CustomTextInput from './CustomTextInput';
-import { Model } from '../types/Chat';
+import { DropdownItem } from '../types/Chat';
+import DropdownComponent from './DropdownComponent';
+
+// Prompt templates
+const PROMPT_TEMPLATES = [
+  {
+    name: 'Default',
+    prompt:
+      'Extract and summarize the main content from the following HTML. Focus on the key information and remove any navigation, ads, or irrelevant content.',
+  },
+  {
+    name: 'Detailed Summary',
+    prompt:
+      'Analyze the following HTML and provide a comprehensive summary. Include: 1) Main topic, 2) Key points, 3) Important details, 4) Conclusions. Remove navigation, ads, and boilerplate content.',
+  },
+  {
+    name: 'Brief Overview',
+    prompt:
+      'Extract the core message from this HTML in 2-3 sentences. Focus only on the most important information.',
+  },
+  {
+    name: 'Structured Data',
+    prompt:
+      'Extract structured information from this HTML. Identify: Title, Author, Date, Main Content, Key Facts. Format as clear sections.',
+  },
+  {
+    name: 'Technical Content',
+    prompt:
+      'Extract technical content from this HTML. Focus on: Code examples, API documentation, technical specifications, and implementation details. Preserve code formatting.',
+  },
+];
 
 const WebFetchSettingsScreen = () => {
   const { colors } = useTheme();
@@ -42,20 +72,19 @@ const WebFetchSettingsScreen = () => {
   const [removeElements, setRemoveElementsState] = useState(
     getRemoveElements()
   );
-  const [showModelPicker, setShowModelPicker] = useState(false);
 
   const allModels = getAllModels();
   const textModels = allModels.textModel || [];
 
+  // Convert models to dropdown items
+  const modelDropdownItems: DropdownItem[] = textModels.map(model => ({
+    label: model.modelName,
+    value: model.modelId,
+  }));
+
   const handleModeChange = (newMode: ContentProcessingMode) => {
     setMode(newMode);
     setContentProcessingMode(newMode);
-  };
-
-  const handleModelSelect = (model: Model) => {
-    setSummaryModelState(model);
-    setSummaryModel(model);
-    setShowModelPicker(false);
   };
 
   const styles = createStyles(colors);
@@ -140,33 +169,52 @@ const WebFetchSettingsScreen = () => {
             <View style={styles.divider} />
             <Text style={styles.sectionSubtitle}>AI Summary Settings</Text>
 
-            <Text style={styles.label}>Summary Model (for web fetch only)</Text>
-            <TouchableOpacity
-              style={styles.modelSelector}
-              onPress={() => setShowModelPicker(!showModelPicker)}>
-              <Text style={styles.modelText}>{summaryModel.modelName}</Text>
-              <Text style={styles.modelArrow}>▼</Text>
-            </TouchableOpacity>
+            <DropdownComponent
+              label="Summary Model (for web fetch only)"
+              data={modelDropdownItems}
+              value={summaryModel.modelId}
+              onChange={(item: DropdownItem) => {
+                const selectedModel = textModels.find(
+                  m => m.modelId === item.value
+                );
+                if (selectedModel) {
+                  setSummaryModelState(selectedModel);
+                  setSummaryModel(selectedModel);
+                }
+              }}
+              placeholder="Select a model"
+            />
             <Text style={styles.hint}>
               Separate from your chat model. Won't affect conversation context.
             </Text>
 
-            {showModelPicker && (
-              <View style={styles.modelPicker}>
-                {textModels.map(model => (
-                  <TouchableOpacity
-                    key={model.modelId}
-                    style={styles.modelOption}
-                    onPress={() => handleModelSelect(model)}>
-                    <Text style={styles.modelOptionText}>
-                      {model.modelName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+            <Text style={styles.label}>Summary Prompt Template</Text>
+            <View style={styles.templateButtons}>
+              {PROMPT_TEMPLATES.map(template => (
+                <TouchableOpacity
+                  key={template.name}
+                  style={[
+                    styles.templateButton,
+                    summaryPrompt === template.prompt &&
+                      styles.templateButtonActive,
+                  ]}
+                  onPress={() => {
+                    setSummaryPrompt(template.prompt);
+                    setAISummaryPrompt(template.prompt);
+                  }}>
+                  <Text
+                    style={[
+                      styles.templateButtonText,
+                      summaryPrompt === template.prompt &&
+                        styles.templateButtonTextActive,
+                    ]}>
+                    {template.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-            <Text style={styles.label}>Summary Prompt</Text>
+            <Text style={styles.label}>Custom Prompt (Editable)</Text>
             <TextInput
               style={styles.promptInput}
               value={summaryPrompt}
@@ -174,11 +222,14 @@ const WebFetchSettingsScreen = () => {
                 setSummaryPrompt(text);
                 setAISummaryPrompt(text);
               }}
-              placeholder="Enter summary prompt"
+              placeholder="Enter custom summary prompt or select a template above"
               multiline
-              numberOfLines={8}
+              numberOfLines={6}
               placeholderTextColor={colors.textSecondary}
             />
+            <Text style={styles.hint}>
+              💡 Tip: Select a template above or write your own custom prompt
+            </Text>
           </>
         )}
 
@@ -292,6 +343,32 @@ const createStyles = (colors: ColorScheme) =>
       fontWeight: '500',
       color: colors.text,
       marginBottom: 8,
+    },
+    templateButtons: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 16,
+    },
+    templateButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: colors.surface,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    templateButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    templateButtonText: {
+      fontSize: 13,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    templateButtonTextActive: {
+      color: '#ffffff',
     },
     modelSelector: {
       flexDirection: 'row',
