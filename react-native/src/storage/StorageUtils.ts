@@ -818,6 +818,26 @@ export function generateOpenAICompatModels(
   return openAICompatModelList;
 }
 
+// Perplexity Search Configuration
+const perplexityEnabledKey = keyPrefix + 'perplexityEnabled';
+const perplexityApiKeyTag = keyPrefix + 'perplexityApiKeyTag';
+
+export function getPerplexityEnabled(): boolean {
+  return storage.getBoolean(perplexityEnabledKey) ?? false;
+}
+
+export function setPerplexityEnabled(enabled: boolean) {
+  storage.set(perplexityEnabledKey, enabled);
+}
+
+export function getPerplexityApiKey(): string {
+  return storage.getString(perplexityApiKeyTag) ?? '';
+}
+
+export function savePerplexityApiKey(key: string) {
+  storage.set(perplexityApiKeyTag, key);
+}
+
 export function getMCPEnabled(): boolean {
   return storage.getBoolean(mcpEnabledKey) ?? false;
 }

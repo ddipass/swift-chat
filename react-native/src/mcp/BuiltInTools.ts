@@ -11,7 +11,10 @@ import {
   getSummaryModel,
   getTextModel,
   saveTextModel,
+  getPerplexityEnabled,
+  getPerplexityApiKey,
 } from '../storage/StorageUtils';
+import { PerplexitySearchClient } from '../search/PerplexitySearch';
 
 export interface BuiltInTool {
   name: string;
@@ -337,10 +340,78 @@ const webFetchTool: BuiltInTool = {
 };
 
 /**
+ * Perplexity Search Tool
+ */
+const perplexitySearchTool: BuiltInTool = {
+  name: 'perplexity_search',
+  description:
+    'Search the web using Perplexity AI. Returns ranked search results with titles, URLs, snippets, and dates. Best for finding current information, news, or specific web content.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: {
+        type: 'string',
+        description: 'The search query',
+      },
+      max_results: {
+        type: 'number',
+        description: 'Maximum number of results (1-20)',
+      },
+      recency_filter: {
+        type: 'string',
+        enum: ['day', 'week', 'month', 'year'],
+        description: 'Filter by recency',
+      },
+    },
+    required: ['query'],
+  },
+  execute: async (args: Record<string, unknown>) => {
+    if (!getPerplexityEnabled()) {
+      return { error: 'Perplexity Search is not enabled' };
+    }
+
+    const apiKey = getPerplexityApiKey();
+    if (!apiKey) {
+      return { error: 'Perplexity API key not configured' };
+    }
+
+    try {
+      const client = new PerplexitySearchClient(apiKey);
+      const results = await client.search({
+        query: String(args.query),
+        maxResults: args.max_results ? Number(args.max_results) : 10,
+        recencyFilter: args.recency_filter as
+          | 'day'
+          | 'week'
+          | 'month'
+          | 'year'
+          | undefined,
+      });
+
+      return {
+        results,
+        formatted: client.formatResults(results),
+      };
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error('[perplexity_search] Error:', errMsg);
+      return { error: `Search failed: ${errMsg}` };
+    }
+  },
+};
+
+/**
  * Get all built-in tools
  */
 export function getBuiltInTools(): BuiltInTool[] {
-  return [webFetchTool];
+  const tools = [webFetchTool];
+
+  // Add Perplexity search if enabled
+  if (getPerplexityEnabled()) {
+    tools.push(perplexitySearchTool);
+  }
+
+  return tools;
 }
 
 /**

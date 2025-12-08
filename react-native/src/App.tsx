@@ -13,6 +13,7 @@ import { AppProvider, useAppContext } from './history/AppProvider.tsx';
 import SettingsScreen from './settings/SettingsScreen.tsx';
 import MCPSettingsScreen from './settings/MCPSettingsScreen.tsx';
 import WebFetchSettingsScreen from './settings/WebFetchSettingsScreen.tsx';
+import PerplexitySettingsScreen from './settings/PerplexitySettingsScreen.tsx';
 import Toast from 'react-native-toast-message';
 import TokenUsageScreen from './settings/TokenUsageScreen.tsx';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -65,6 +66,10 @@ const DrawerNavigator = () => {
       <Drawer.Screen
         name="WebFetchSettings"
         component={WebFetchSettingsScreen}
+      />
+      <Drawer.Screen
+        name="PerplexitySettings"
+        component={PerplexitySettingsScreen}
       />
     </Drawer.Navigator>
   );

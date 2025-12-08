@@ -9,6 +9,7 @@ export type RouteParamList = {
   Settings: NonNullable<unknown>;
   MCPSettings: NonNullable<unknown>;
   WebFetchSettings: NonNullable<unknown>;
+  PerplexitySettings: NonNullable<unknown>;
   TokenUsage: NonNullable<unknown>;
   Prompt: {
     prompt?: SystemPrompt;

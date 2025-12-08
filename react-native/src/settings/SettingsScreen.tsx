@@ -675,6 +675,22 @@ function SettingsScreen(): React.JSX.Element {
         <TouchableOpacity
           activeOpacity={1}
           style={styles.itemContainer}
+          onPress={() => navigation.navigate('PerplexitySettings', {})}>
+          <Text style={styles.label}>Perplexity Search</Text>
+          <View style={styles.arrowContainer}>
+            <Image
+              style={styles.arrowImage}
+              source={
+                isDark
+                  ? require('../assets/back_dark.png')
+                  : require('../assets/back.png')
+              }
+            />
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.itemContainer}
           onPress={() => navigation.navigate('TokenUsage', {})}>
           <Text style={styles.label}>Usage</Text>
           <View style={styles.arrowContainer}>
