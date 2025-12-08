@@ -39,11 +39,13 @@ const MCPSettingsScreen = () => {
   const [newServerUrl, setNewServerUrl] = useState('');
   const [newServerApiKey, setNewServerApiKey] = useState('');
   const [newServerEnv, setNewServerEnv] = useState('');
-  const [newServerAuthType, setNewServerAuthType] = useState<'apiKey' | 'oauth'>('apiKey');
+  const [newServerAuthType, setNewServerAuthType] = useState<
+    'apiKey' | 'oauth'
+  >('apiKey');
 
   // Listen for OAuth callback
   useEffect(() => {
-    const subscription = Linking.addEventListener('url', async (event) => {
+    const subscription = Linking.addEventListener('url', async event => {
       if (event.url.startsWith('swiftchat://oauth/callback')) {
         const serverId = await handleOAuthCallback(event.url);
         if (serverId) {
@@ -262,7 +264,9 @@ const MCPSettingsScreen = () => {
                       <Text style={styles.serverName}>{server.name}</Text>
                       <Text style={styles.serverUrl}>{server.url}</Text>
                       {server.authType === 'oauth' && server.oauthToken && (
-                        <Text style={styles.serverAuth}>✓ OAuth Authorized</Text>
+                        <Text style={styles.serverAuth}>
+                          ✓ OAuth Authorized
+                        </Text>
                       )}
                       {server.env && Object.keys(server.env).length > 0 && (
                         <Text style={styles.serverEnv}>
@@ -320,19 +324,21 @@ const MCPSettingsScreen = () => {
                     placeholder="https://mcp.example.com"
                     autoCapitalize="none"
                   />
-                  
+
                   <Text style={styles.label}>Authentication Type</Text>
                   <View style={styles.authTypeContainer}>
                     <TouchableOpacity
                       style={[
                         styles.authTypeButton,
-                        newServerAuthType === 'apiKey' && styles.authTypeButtonActive,
+                        newServerAuthType === 'apiKey' &&
+                          styles.authTypeButtonActive,
                       ]}
                       onPress={() => setNewServerAuthType('apiKey')}>
                       <Text
                         style={[
                           styles.authTypeButtonText,
-                          newServerAuthType === 'apiKey' && styles.authTypeButtonTextActive,
+                          newServerAuthType === 'apiKey' &&
+                            styles.authTypeButtonTextActive,
                         ]}>
                         API Key
                       </Text>
@@ -340,19 +346,21 @@ const MCPSettingsScreen = () => {
                     <TouchableOpacity
                       style={[
                         styles.authTypeButton,
-                        newServerAuthType === 'oauth' && styles.authTypeButtonActive,
+                        newServerAuthType === 'oauth' &&
+                          styles.authTypeButtonActive,
                       ]}
                       onPress={() => setNewServerAuthType('oauth')}>
                       <Text
                         style={[
                           styles.authTypeButtonText,
-                          newServerAuthType === 'oauth' && styles.authTypeButtonTextActive,
+                          newServerAuthType === 'oauth' &&
+                            styles.authTypeButtonTextActive,
                         ]}>
                         OAuth
                       </Text>
                     </TouchableOpacity>
                   </View>
-                  
+
                   {newServerAuthType === 'apiKey' && (
                     <CustomTextInput
                       label="API Key"
@@ -362,7 +370,7 @@ const MCPSettingsScreen = () => {
                       secureTextEntry
                     />
                   )}
-                  
+
                   <CustomTextInput
                     label="Environment Variables (Optional)"
                     value={newServerEnv}

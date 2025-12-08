@@ -1,8 +1,5 @@
 import { MCPClient, MCPTool } from './MCPClient';
-import {
-  getMCPEnabled,
-  getMCPServers,
-} from '../storage/StorageUtils';
+import { getMCPEnabled, getMCPServers } from '../storage/StorageUtils';
 import {
   getBuiltInTools,
   executeBuiltInTool,
@@ -22,7 +19,9 @@ function getMCPClients(): MCPClient[] {
   const clients: MCPClient[] = [];
 
   for (const server of servers) {
-    if (!server.enabled) continue;
+    if (!server.enabled) {
+      continue;
+    }
 
     let client = mcpClients.get(server.id);
     if (!client) {

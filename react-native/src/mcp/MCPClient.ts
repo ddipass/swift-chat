@@ -87,14 +87,14 @@ export class MCPClient {
 
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {};
-    
+
     // OAuth token takes precedence
     if (this.config.oauthToken) {
       headers.Authorization = `Bearer ${this.config.oauthToken}`;
     } else if (this.config.apiKey) {
       headers.Authorization = `Bearer ${this.config.apiKey}`;
     }
-    
+
     return headers;
   }
 }

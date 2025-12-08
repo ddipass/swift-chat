@@ -27,21 +27,21 @@ export async function startOAuthFlow(server: MCPServer): Promise<void> {
   try {
     // Get OAuth configuration
     const config = await getOAuthConfig(server.url);
-    
+
     if (!config.authorization_endpoint || !config.token_endpoint) {
       throw new Error('Invalid OAuth configuration');
     }
-    
+
     // Register client dynamically
     const clientId = await registerClient(config, server.name);
-    
+
     // Generate PKCE
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
-    
+
     // Generate state (use serverId)
     const state = server.id;
-    
+
     // Store for callback
     storeOAuthState(state, {
       serverId: server.id,
@@ -49,7 +49,7 @@ export async function startOAuthFlow(server: MCPServer): Promise<void> {
       clientId,
       tokenEndpoint: config.token_endpoint,
     });
-    
+
     // Build auth URL
     const authUrl = buildAuthUrl(
       config.authorization_endpoint,
@@ -57,7 +57,7 @@ export async function startOAuthFlow(server: MCPServer): Promise<void> {
       codeChallenge,
       state
     );
-    
+
     // Open browser
     await Linking.openURL(authUrl);
   } catch (error) {
@@ -74,21 +74,21 @@ export async function handleOAuthCallback(url: string): Promise<string | null> {
     const parsed = new URL(url);
     const code = parsed.searchParams.get('code');
     const state = parsed.searchParams.get('state');
-    
+
     if (!code) {
       throw new Error('Missing authorization code');
     }
-    
+
     if (!state) {
       throw new Error('Missing state parameter');
     }
-    
+
     // Get stored state
     const oauthState = getOAuthState(state);
     if (!oauthState) {
       throw new Error('Invalid or expired state');
     }
-    
+
     // Exchange code for token
     const tokenData = await exchangeCodeForToken(
       oauthState.tokenEndpoint,
@@ -96,11 +96,11 @@ export async function handleOAuthCallback(url: string): Promise<string | null> {
       oauthState.clientId,
       oauthState.codeVerifier
     );
-    
+
     if (!tokenData.access_token) {
       throw new Error('No access token received');
     }
-    
+
     // Update server with token
     updateMCPServer(oauthState.serverId, {
       authType: 'oauth',
@@ -108,10 +108,10 @@ export async function handleOAuthCallback(url: string): Promise<string | null> {
       oauthRefreshToken: tokenData.refresh_token,
       oauthExpiry: Date.now() + (tokenData.expires_in || 3600) * 1000,
     });
-    
+
     // Clear state
     clearOAuthState(state);
-    
+
     return oauthState.serverId;
   } catch (error) {
     console.error('OAuth callback error:', error);
@@ -121,26 +121,29 @@ export async function handleOAuthCallback(url: string): Promise<string | null> {
 
 async function getOAuthConfig(serverUrl: string): Promise<OAuthConfig> {
   const configUrl = `${serverUrl}/.well-known/oauth-authorization-server`;
-  
+
   const response = await fetch(configUrl);
   if (!response.ok) {
     throw new Error(`Failed to get OAuth config: ${response.status}`);
   }
-  
+
   const config = await response.json();
-  
+
   if (!config.authorization_endpoint || !config.token_endpoint) {
     throw new Error('Invalid OAuth configuration response');
   }
-  
+
   return config;
 }
 
-async function registerClient(config: OAuthConfig, appName: string): Promise<string> {
+async function registerClient(
+  config: OAuthConfig,
+  appName: string
+): Promise<string> {
   if (!config.registration_endpoint) {
     throw new Error('Dynamic client registration not supported by this server');
   }
-  
+
   const response = await fetch(config.registration_endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -152,18 +155,20 @@ async function registerClient(config: OAuthConfig, appName: string): Promise<str
       token_endpoint_auth_method: 'none',
     }),
   });
-  
+
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Client registration failed: ${response.status} ${errorText}`);
+    throw new Error(
+      `Client registration failed: ${response.status} ${errorText}`
+    );
   }
-  
+
   const data = await response.json();
-  
+
   if (!data.client_id) {
     throw new Error('No client_id in registration response');
   }
-  
+
   return data.client_id;
 }
 
@@ -181,8 +186,14 @@ function buildAuthUrl(
     code_challenge_method: 'S256',
     state: state,
   });
-  
+
   return `${authEndpoint}?${params.toString()}`;
+}
+
+interface TokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
 }
 
 async function exchangeCodeForToken(
@@ -190,7 +201,7 @@ async function exchangeCodeForToken(
   code: string,
   clientId: string,
   codeVerifier: string
-): Promise<any> {
+): Promise<TokenResponse> {
   const response = await fetch(tokenEndpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -202,19 +213,19 @@ async function exchangeCodeForToken(
       code_verifier: codeVerifier,
     }).toString(),
   });
-  
+
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Token exchange failed: ${response.status} ${errorText}`);
   }
-  
+
   return await response.json();
 }
 
 // PKCE helpers
 function generateCodeVerifier(): string {
   const array = new Uint8Array(32);
-  
+
   // Check if crypto is available
   if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
     // Fallback for environments without crypto
@@ -224,7 +235,7 @@ function generateCodeVerifier(): string {
   } else {
     crypto.getRandomValues(array);
   }
-  
+
   return base64URLEncode(array);
 }
 
@@ -235,7 +246,7 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
     console.warn('crypto.subtle not available, using plain code challenge');
     return verifier;
   }
-  
+
   const encoder = new TextEncoder();
   const data = encoder.encode(verifier);
   const hash = await crypto.subtle.digest('SHA-256', data);
@@ -248,9 +259,9 @@ function base64URLEncode(buffer: Uint8Array): string {
   for (let i = 0; i < buffer.length; i++) {
     binary += String.fromCharCode(buffer[i]);
   }
-  
+
   const base64 = btoa(binary);
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/[=]/g, '');
 }
 
 // State management (in-memory)
@@ -258,7 +269,7 @@ const oauthStates = new Map<string, OAuthState>();
 
 function storeOAuthState(state: string, data: OAuthState) {
   oauthStates.set(state, data);
-  
+
   // Auto-cleanup after 10 minutes
   setTimeout(() => {
     oauthStates.delete(state);
