@@ -1,5 +1,6 @@
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { MCPServer, updateMCPServer } from '../storage/StorageUtils';
+import { exec } from 'child_process';
 
 const REDIRECT_URI = 'swiftchat://oauth/callback';
 
@@ -66,17 +67,31 @@ export async function startOAuthFlow(server: MCPServer): Promise<void> {
     console.log('[OAuth] Auth URL:', authUrl);
 
     try {
-      // Check if URL can be opened
-      const canOpen = await Linking.canOpenURL(authUrl);
-      console.log('[OAuth] Can open URL:', canOpen);
+      // Workaround for blobId error on macOS
+      if (Platform.OS === 'macos') {
+        // Use shell command to open URL on macOS to avoid React Native Linking bug
+        await new Promise<void>((resolve, reject) => {
+          exec(`open "${authUrl}"`, (error: Error | null) => {
+            if (error) {
+              reject(error);
+            } else {
+              console.log('[OAuth] URL opened via shell');
+              resolve();
+            }
+          });
+        });
+      } else {
+        // Use Linking.openURL on other platforms
+        const canOpen = await Linking.canOpenURL(authUrl);
+        console.log('[OAuth] Can open URL:', canOpen);
 
-      if (!canOpen) {
-        throw new Error('Cannot open authorization URL');
+        if (!canOpen) {
+          throw new Error('Cannot open authorization URL');
+        }
+
+        await Linking.openURL(authUrl);
+        console.log('[OAuth] URL opened');
       }
-
-      // Open browser
-      await Linking.openURL(authUrl);
-      console.log('[OAuth] URL opened');
     } catch (linkingError) {
       console.error('[OAuth] Linking Error:', linkingError);
 
