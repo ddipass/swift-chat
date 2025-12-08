@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   KeyboardAvoidingView,
+  Linking,
 } from 'react-native';
 import { useTheme, ColorScheme } from '../theme';
 import {
@@ -24,6 +25,7 @@ import {
   MCPServer,
 } from '../storage/StorageUtils';
 import CustomTextInput from './CustomTextInput';
+import { startOAuthFlow, handleOAuthCallback } from '../mcp/MCPOAuth';
 
 const MCPSettingsScreen = () => {
   const { colors } = useTheme();
@@ -36,6 +38,42 @@ const MCPSettingsScreen = () => {
   const [newServerName, setNewServerName] = useState('');
   const [newServerUrl, setNewServerUrl] = useState('');
   const [newServerApiKey, setNewServerApiKey] = useState('');
+  const [newServerEnv, setNewServerEnv] = useState('');
+  const [newServerAuthType, setNewServerAuthType] = useState<'apiKey' | 'oauth'>('apiKey');
+
+  // Listen for OAuth callback
+  useEffect(() => {
+    const subscription = Linking.addEventListener('url', async (event) => {
+      if (event.url.startsWith('swiftchat://oauth/callback')) {
+        const serverId = await handleOAuthCallback(event.url);
+        if (serverId) {
+          // Refresh servers list
+          setServers(getMCPServers());
+          if (Platform.OS === 'web') {
+            // @ts-expect-error - alert is available in web
+            alert('OAuth authorization successful!');
+          } else {
+            Alert.alert('Success', 'OAuth authorization successful!');
+          }
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  const handleAuthorize = async (server: MCPServer) => {
+    try {
+      await startOAuthFlow(server);
+    } catch (error) {
+      if (Platform.OS === 'web') {
+        // @ts-expect-error - alert is available in web
+        alert(`Authorization failed: ${error}`);
+      } else {
+        Alert.alert('Error', `Authorization failed: ${error}`);
+      }
+    }
+  };
 
   const handleAddServer = () => {
     if (!newServerName || !newServerUrl) {
@@ -106,12 +144,33 @@ const MCPSettingsScreen = () => {
       return;
     }
 
+    // Parse environment variables
+    let envVars: Record<string, string> | undefined;
+    if (newServerEnv.trim()) {
+      try {
+        envVars = JSON.parse(newServerEnv);
+        if (typeof envVars !== 'object' || Array.isArray(envVars)) {
+          throw new Error('Must be an object');
+        }
+      } catch (e) {
+        if (Platform.OS === 'web') {
+          // @ts-expect-error - alert is available in web
+          alert('Invalid JSON format for environment variables');
+        } else {
+          Alert.alert('Error', 'Invalid JSON format for environment variables');
+        }
+        return;
+      }
+    }
+
     const newServer: MCPServer = {
       id: Date.now().toString(),
       name: newServerName,
       url: newServerUrl,
       apiKey: newServerApiKey,
       enabled: true,
+      env: envVars,
+      authType: newServerAuthType,
     };
 
     addMCPServer(newServer);
@@ -120,6 +179,7 @@ const MCPSettingsScreen = () => {
     setNewServerName('');
     setNewServerUrl('');
     setNewServerApiKey('');
+    setNewServerEnv('');
   };
 
   const handleToggleServer = (serverId: string, enabled: boolean) => {
@@ -201,6 +261,14 @@ const MCPSettingsScreen = () => {
                     <View style={styles.serverInfo}>
                       <Text style={styles.serverName}>{server.name}</Text>
                       <Text style={styles.serverUrl}>{server.url}</Text>
+                      {server.authType === 'oauth' && server.oauthToken && (
+                        <Text style={styles.serverAuth}>✓ OAuth Authorized</Text>
+                      )}
+                      {server.env && Object.keys(server.env).length > 0 && (
+                        <Text style={styles.serverEnv}>
+                          Env: {Object.keys(server.env).join(', ')}
+                        </Text>
+                      )}
                     </View>
                     <Switch
                       value={server.enabled}
@@ -209,6 +277,16 @@ const MCPSettingsScreen = () => {
                       }
                     />
                   </View>
+                  {server.authType === 'oauth' && !server.oauthToken && (
+                    <TouchableOpacity
+                      style={styles.authorizeButton}
+                      activeOpacity={0.7}
+                      onPress={() => handleAuthorize(server)}>
+                      <Text style={styles.authorizeButtonText}>
+                        → Authorize with OAuth
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={styles.removeButton}
                     activeOpacity={0.7}
@@ -239,16 +317,63 @@ const MCPSettingsScreen = () => {
                     label="Server URL"
                     value={newServerUrl}
                     onChangeText={setNewServerUrl}
-                    placeholder="http://localhost:3000"
+                    placeholder="https://mcp.example.com"
                     autoCapitalize="none"
                   />
+                  
+                  <Text style={styles.label}>Authentication Type</Text>
+                  <View style={styles.authTypeContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.authTypeButton,
+                        newServerAuthType === 'apiKey' && styles.authTypeButtonActive,
+                      ]}
+                      onPress={() => setNewServerAuthType('apiKey')}>
+                      <Text
+                        style={[
+                          styles.authTypeButtonText,
+                          newServerAuthType === 'apiKey' && styles.authTypeButtonTextActive,
+                        ]}>
+                        API Key
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.authTypeButton,
+                        newServerAuthType === 'oauth' && styles.authTypeButtonActive,
+                      ]}
+                      onPress={() => setNewServerAuthType('oauth')}>
+                      <Text
+                        style={[
+                          styles.authTypeButtonText,
+                          newServerAuthType === 'oauth' && styles.authTypeButtonTextActive,
+                        ]}>
+                        OAuth
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {newServerAuthType === 'apiKey' && (
+                    <CustomTextInput
+                      label="API Key"
+                      value={newServerApiKey}
+                      onChangeText={setNewServerApiKey}
+                      placeholder="Enter API key"
+                      secureTextEntry
+                    />
+                  )}
+                  
                   <CustomTextInput
-                    label="API Key (Optional)"
-                    value={newServerApiKey}
-                    onChangeText={setNewServerApiKey}
-                    placeholder="Enter API key if required"
-                    secureTextEntry
+                    label="Environment Variables (Optional)"
+                    value={newServerEnv}
+                    onChangeText={setNewServerEnv}
+                    placeholder='{"KEY": "value"}'
+                    autoCapitalize="none"
+                    multiline
                   />
+                  <Text style={styles.hintText}>
+                    Enter environment variables as JSON object
+                  </Text>
                   <View style={styles.formActions}>
                     <TouchableOpacity
                       style={styles.cancelButton}
@@ -258,6 +383,8 @@ const MCPSettingsScreen = () => {
                         setNewServerName('');
                         setNewServerUrl('');
                         setNewServerApiKey('');
+                        setNewServerEnv('');
+                        setNewServerAuthType('apiKey');
                       }}>
                       <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
@@ -346,12 +473,36 @@ const createStyles = (colors: ColorScheme) =>
       fontSize: 13,
       color: colors.textSecondary,
     },
+    serverEnv: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+      fontStyle: 'italic',
+    },
+    serverAuth: {
+      fontSize: 12,
+      color: colors.primary,
+      marginTop: 2,
+      fontWeight: '500',
+    },
     removeButton: {
       paddingVertical: 4,
     },
     removeButtonText: {
       color: colors.error || '#FF3B30',
       fontSize: 14,
+    },
+    authorizeButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 6,
+      marginBottom: 8,
+    },
+    authorizeButtonText: {
+      color: '#ffffff',
+      fontSize: 14,
+      fontWeight: '500',
     },
     addButton: {
       backgroundColor: colors.primary,
@@ -370,6 +521,40 @@ const createStyles = (colors: ColorScheme) =>
       borderRadius: 6,
       padding: 16,
       marginTop: 4,
+    },
+    hintText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: -8,
+      marginBottom: 8,
+    },
+    authTypeContainer: {
+      flexDirection: 'row',
+      marginTop: 8,
+      marginBottom: 16,
+      gap: 12,
+    },
+    authTypeButton: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      backgroundColor: colors.inputBackground,
+      alignItems: 'center',
+    },
+    authTypeButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    authTypeButtonText: {
+      fontSize: 14,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    authTypeButtonTextActive: {
+      color: '#ffffff',
     },
     formActions: {
       flexDirection: 'row',

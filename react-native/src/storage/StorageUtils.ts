@@ -833,6 +833,11 @@ export interface MCPServer {
   url: string;
   apiKey: string;
   enabled: boolean;
+  env?: Record<string, string>;
+  authType?: 'apiKey' | 'oauth'; // Authentication type
+  oauthToken?: string; // OAuth access token
+  oauthRefreshToken?: string; // OAuth refresh token
+  oauthExpiry?: number; // Token expiry timestamp
 }
 
 const mcpServersKey = 'mcpServers';

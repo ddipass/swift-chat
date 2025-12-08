@@ -1,8 +1,7 @@
 import { MCPClient, MCPTool } from './MCPClient';
 import {
   getMCPEnabled,
-  getMCPServerUrl,
-  getMCPApiKey,
+  getMCPServers,
 } from '../storage/StorageUtils';
 import {
   getBuiltInTools,
@@ -10,24 +9,35 @@ import {
   isBuiltInTool,
 } from './BuiltInTools';
 
-let mcpClient: MCPClient | null = null;
+const mcpClients = new Map<string, MCPClient>();
 let cachedTools: MCPTool[] = [];
 
-export function getMCPClient(): MCPClient | null {
+function getMCPClients(): MCPClient[] {
   const enabled = getMCPEnabled();
   if (!enabled) {
-    return null;
+    return [];
   }
 
-  if (!mcpClient) {
-    mcpClient = new MCPClient({
-      enabled,
-      serverUrl: getMCPServerUrl(),
-      apiKey: getMCPApiKey(),
-    });
+  const servers = getMCPServers();
+  const clients: MCPClient[] = [];
+
+  for (const server of servers) {
+    if (!server.enabled) continue;
+
+    let client = mcpClients.get(server.id);
+    if (!client) {
+      client = new MCPClient({
+        enabled: true,
+        serverUrl: server.url,
+        apiKey: server.apiKey,
+        oauthToken: server.oauthToken,
+      });
+      mcpClients.set(server.id, client);
+    }
+    clients.push(client);
   }
 
-  return mcpClient;
+  return clients;
 }
 
 export async function getMCPTools(): Promise<MCPTool[]> {
@@ -39,13 +49,22 @@ export async function getMCPTools(): Promise<MCPTool[]> {
   }));
 
   // Add external MCP tools if enabled
-  const client = getMCPClient();
-  if (!client) {
+  const clients = getMCPClients();
+  if (clients.length === 0) {
     return builtInTools;
   }
 
   if (cachedTools.length === 0) {
-    cachedTools = await client.listTools();
+    const allTools: MCPTool[] = [];
+    for (const client of clients) {
+      try {
+        const tools = await client.listTools();
+        allTools.push(...tools);
+      } catch (error) {
+        console.error('Failed to list tools from MCP server:', error);
+      }
+    }
+    cachedTools = allTools;
   }
 
   return [...builtInTools, ...cachedTools];
@@ -53,7 +72,7 @@ export async function getMCPTools(): Promise<MCPTool[]> {
 
 export function refreshMCPTools() {
   cachedTools = [];
-  mcpClient = null;
+  mcpClients.clear();
 }
 
 export async function callMCPTool(
@@ -65,13 +84,23 @@ export async function callMCPTool(
     return await executeBuiltInTool(name, args);
   }
 
-  // Otherwise, call external MCP server
-  const client = getMCPClient();
-  if (!client) {
+  // Try calling the tool on all enabled MCP servers
+  const clients = getMCPClients();
+  if (clients.length === 0) {
     throw new Error('MCP not enabled');
   }
 
-  return await client.callTool(name, args);
+  let lastError: Error | null = null;
+  for (const client of clients) {
+    try {
+      return await client.callTool(name, args);
+    } catch (error) {
+      lastError = error as Error;
+      // Continue to next server
+    }
+  }
+
+  throw lastError || new Error('All MCP servers failed');
 }
 
 /**
