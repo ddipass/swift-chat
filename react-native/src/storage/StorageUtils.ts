@@ -821,6 +821,7 @@ export function generateOpenAICompatModels(
 // Perplexity Search Configuration
 const perplexityEnabledKey = keyPrefix + 'perplexityEnabled';
 const perplexityApiKeyTag = keyPrefix + 'perplexityApiKeyTag';
+const perplexityEnabledToolsKey = keyPrefix + 'perplexityEnabledTools';
 
 export function getPerplexityEnabled(): boolean {
   return storage.getBoolean(perplexityEnabledKey) ?? false;
@@ -836,6 +837,49 @@ export function getPerplexityApiKey(): string {
 
 export function savePerplexityApiKey(key: string) {
   storage.set(perplexityApiKeyTag, key);
+}
+
+export function getPerplexityEnabledTools(): string[] {
+  const tools = storage.getString(perplexityEnabledToolsKey);
+  if (!tools) {
+    return ['search']; // Default: only search enabled
+  }
+  try {
+    return JSON.parse(tools);
+  } catch {
+    return ['search'];
+  }
+}
+
+export function savePerplexityEnabledTools(tools: string[]) {
+  storage.set(perplexityEnabledToolsKey, JSON.stringify(tools));
+}
+
+const perplexityToolDescriptionsKey = keyPrefix + 'perplexityToolDescriptions';
+
+export interface PerplexityToolDescription {
+  search?: string;
+  ask?: string;
+  research?: string;
+  reason?: string;
+}
+
+export function getPerplexityToolDescriptions(): PerplexityToolDescription {
+  const descriptions = storage.getString(perplexityToolDescriptionsKey);
+  if (!descriptions) {
+    return {};
+  }
+  try {
+    return JSON.parse(descriptions);
+  } catch {
+    return {};
+  }
+}
+
+export function savePerplexityToolDescriptions(
+  descriptions: PerplexityToolDescription
+) {
+  storage.set(perplexityToolDescriptionsKey, JSON.stringify(descriptions));
 }
 
 export function getMCPEnabled(): boolean {

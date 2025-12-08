@@ -219,7 +219,9 @@ const MCPSettingsScreen = () => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
-        <ScrollView style={styles.container}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={styles.settingRow}>
             <Text style={styles.label}>Enable MCP</Text>
             <Switch

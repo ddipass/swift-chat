@@ -91,7 +91,9 @@ const WebFetchSettingsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 60 }}>
         <CustomTextInput
           label="Timeout (seconds)"
           value={timeout}
@@ -272,6 +274,11 @@ const createStyles = (colors: ColorScheme) =>
       flex: 1,
       padding: 20,
     },
+    label: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+    },
     hint: {
       fontSize: 12,
       color: colors.textSecondary,
@@ -310,12 +317,6 @@ const createStyles = (colors: ColorScheme) =>
     },
     modeSwitchTextActive: {
       color: '#ffffff',
-    },
-    label: {
-      fontSize: 16,
-      fontWeight: '500',
-      color: colors.text,
-      marginBottom: 8,
     },
     templateButtons: {
       flexDirection: 'row',
