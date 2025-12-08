@@ -52,8 +52,21 @@ export const invokeBedrockWithCallBack = async (
   prompt: SystemPrompt | null,
   shouldStop: () => boolean,
   controller: AbortController,
-  callback: CallbackFunction
+  callback: CallbackFunction,
+  toolCallDepth: number = 0
 ) => {
+  // Prevent infinite tool calling loops
+  const MAX_TOOL_DEPTH = 5;
+  if (toolCallDepth >= MAX_TOOL_DEPTH) {
+    console.warn('[Bedrock] Max tool call depth reached:', toolCallDepth);
+    callback(
+      'Maximum tool call depth reached. Please try a simpler request.',
+      true,
+      false
+    );
+    return;
+  }
+
   const currentModelTag = getModelTag(getTextModel());
   if (chatMode === ChatMode.Text && currentModelTag !== ModelTag.Bedrock) {
     if (
@@ -143,6 +156,11 @@ export const invokeBedrockWithCallBack = async (
     const url = getApiPrefix() + '/converse/v3';
     let completeMessage = '';
     let completeReasoning = '';
+    let collectedToolUse: {
+      name: string;
+      input?: Record<string, unknown>;
+      toolUseId: string;
+    } | null = null;
     const timeoutId = setTimeout(() => controller.abort(), 60000);
     fetch(url!, options)
       .then(response => {
@@ -176,6 +194,121 @@ export const invokeBedrockWithCallBack = async (
                 await sleep(0.1);
                 const bedrockChunk = parseChunk(event);
                 if (bedrockChunk) {
+                  // Collect tool use information
+                  if (bedrockChunk.toolUse) {
+                    console.log(
+                      '[Bedrock] Tool use requested:',
+                      bedrockChunk.toolUse
+                    );
+                    collectedToolUse = bedrockChunk.toolUse;
+                  }
+
+                  // Handle tool execution when stop reason is tool_use
+                  if (
+                    bedrockChunk.stopReason === 'tool_use' &&
+                    collectedToolUse
+                  ) {
+                    console.log(
+                      '[Bedrock] Executing tool:',
+                      collectedToolUse.name
+                    );
+
+                    // Show tool execution feedback
+                    callback(
+                      completeMessage +
+                        `\n\n🔧 正在使用 ${collectedToolUse.name} 工具...`,
+                      false,
+                      false,
+                      undefined,
+                      completeReasoning
+                    );
+
+                    try {
+                      // Import MCPService dynamically
+                      const { callMCPTool } = await import('../mcp/MCPService');
+
+                      // Execute the tool with timeout
+                      const toolPromise = callMCPTool(
+                        collectedToolUse.name,
+                        collectedToolUse.input || {}
+                      );
+                      const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(
+                          () => reject(new Error('Tool timeout')),
+                          30000
+                        )
+                      );
+
+                      const toolResult = await Promise.race([
+                        toolPromise,
+                        timeoutPromise,
+                      ]);
+
+                      console.log('[Bedrock] Tool result:', toolResult);
+
+                      // Truncate large results
+                      let resultText = JSON.stringify(toolResult);
+                      if (resultText.length > 10000) {
+                        resultText =
+                          resultText.substring(0, 10000) + '...[truncated]';
+                        console.log(
+                          '[Bedrock] Result truncated to 10000 chars'
+                        );
+                      }
+
+                      // Add assistant message with toolUse
+                      messages.push({
+                        role: 'assistant',
+                        content: [
+                          {
+                            toolUse: collectedToolUse,
+                          },
+                        ],
+                      });
+
+                      // Add user message with toolResult
+                      messages.push({
+                        role: 'user',
+                        content: [
+                          {
+                            toolResult: {
+                              toolUseId: collectedToolUse.toolUseId,
+                              content: [{ text: resultText }],
+                            },
+                          },
+                        ],
+                      });
+
+                      // Continue conversation with tool result
+                      await invokeBedrockWithCallBack(
+                        messages,
+                        chatMode,
+                        prompt,
+                        shouldStop,
+                        controller,
+                        callback,
+                        toolCallDepth + 1
+                      );
+                      return;
+                    } catch (toolError) {
+                      console.error(
+                        '[Bedrock] Tool execution error:',
+                        toolError
+                      );
+                      callback(
+                        completeMessage +
+                          '\n\n[Tool execution failed: ' +
+                          toolError +
+                          ']',
+                        true,
+                        false,
+                        undefined,
+                        completeReasoning
+                      );
+                      return;
+                    }
+                  }
+
                   if (bedrockChunk.reasoning) {
                     completeReasoning += bedrockChunk.reasoning ?? '';
                     callback(
@@ -519,8 +652,24 @@ function parseChunk(part: string) {
     let combinedReasoning = '';
     let combinedText = '';
     let lastUsage;
+    let toolUse;
+    let stopReason;
+
     try {
       const chunk: BedrockChunk = JSON.parse(part);
+
+      // Check for tool use
+      if (chunk.contentBlockStart?.start?.toolUse) {
+        toolUse = chunk.contentBlockStart.start.toolUse;
+        console.log('[Tool Use Detected]', toolUse);
+      }
+
+      // Check for stop reason
+      if (chunk.messageStop?.stopReason) {
+        stopReason = chunk.messageStop.stopReason;
+        console.log('[Stop Reason]', stopReason);
+      }
+
       const content = extractChunkContent(chunk, part);
       if (content.reasoning) {
         combinedReasoning += content.reasoning;
@@ -543,6 +692,8 @@ function parseChunk(part: string) {
       reasoning: combinedReasoning,
       text: combinedText,
       usage: lastUsage,
+      toolUse,
+      stopReason,
     };
   }
   return null;

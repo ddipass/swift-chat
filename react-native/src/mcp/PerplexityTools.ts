@@ -1,3 +1,18 @@
+/**
+ * Perplexity Tools - 客户端直接调用
+ *
+ * 注意：这是客户端直接调用 Perplexity API 的实现
+ *
+ * 推荐使用方式：
+ * - 生产环境：使用 MCP 方式（通过后端）
+ *   在 MCPSettings 中添加 Perplexity MCP server
+ *
+ * - 开发/测试：可以使用此客户端实现
+ *   在 PerplexitySettings 中配置 API Key
+ *
+ * 此文件作为回退方案保留，当后端不可用时自动使用
+ */
+
 import { BuiltInTool } from './BuiltInTools';
 import {
   getPerplexityEnabled,

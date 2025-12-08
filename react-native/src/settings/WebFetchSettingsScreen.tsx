@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,10 +24,13 @@ import {
   setRemoveElements,
   ContentProcessingMode,
   getAllModels,
+  getApiUrl,
+  getApiKey,
 } from '../storage/StorageUtils';
 import CustomTextInput from './CustomTextInput';
 import { DropdownItem } from '../types/Chat';
 import DropdownComponent from './DropdownComponent';
+import { BackendToolsClient } from '../mcp/BackendToolsClient';
 
 // Prompt templates
 const PROMPT_TEMPLATES = [
@@ -72,9 +75,31 @@ const WebFetchSettingsScreen = () => {
   const [removeElements, setRemoveElementsState] = useState(
     getRemoveElements()
   );
+  const [backendStatus, setBackendStatus] = useState<
+    'checking' | 'online' | 'offline'
+  >('checking');
 
   const allModels = getAllModels();
   const textModels = allModels.textModel || [];
+
+  // Check backend status
+  useEffect(() => {
+    const checkBackend = async () => {
+      const apiUrl = getApiUrl();
+      const apiKey = getApiKey();
+
+      if (!apiUrl || !apiKey) {
+        setBackendStatus('offline');
+        return;
+      }
+
+      const client = new BackendToolsClient(apiUrl, apiKey);
+      const isOnline = await client.checkHealth();
+      setBackendStatus(isOnline ? 'online' : 'offline');
+    };
+
+    checkBackend();
+  }, []);
 
   // Convert models to dropdown items
   const modelDropdownItems: DropdownItem[] = textModels.map(model => ({
@@ -94,6 +119,34 @@ const WebFetchSettingsScreen = () => {
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}>
+        <View style={styles.infoBox}>
+          <View style={styles.statusRow}>
+            <Text style={styles.infoText}>
+              ℹ️ Web Fetch extracts content from web pages.
+            </Text>
+            <View
+              style={[
+                styles.statusBadge,
+                backendStatus === 'online' && styles.statusOnline,
+                backendStatus === 'offline' && styles.statusOffline,
+              ]}>
+              <Text style={styles.statusText}>
+                {backendStatus === 'checking'
+                  ? '...'
+                  : backendStatus === 'online'
+                  ? '● Backend'
+                  : '○ Client'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.infoTextSmall}>
+            {'\n'}
+            Backend mode: Executed through backend server
+            {'\n'}
+            Client mode: Executed locally (fallback)
+          </Text>
+        </View>
+
         <CustomTextInput
           label="Timeout (seconds)"
           value={timeout}
@@ -276,6 +329,48 @@ const createStyles = (colors: ColorScheme) =>
     },
     contentContainer: {
       paddingBottom: 60,
+    },
+    infoBox: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 6,
+      padding: 14,
+      marginBottom: 16,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
+    },
+    statusRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      backgroundColor: colors.background,
+    },
+    statusOnline: {
+      backgroundColor: '#E8F5E9',
+    },
+    statusOffline: {
+      backgroundColor: '#FFEBEE',
+    },
+    statusText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    infoText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      flex: 1,
+      marginRight: 8,
+    },
+    infoTextSmall: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      lineHeight: 20,
     },
     label: {
       fontSize: 16,

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useTheme, ColorScheme } from '../theme';
+import { useNavigation } from '@react-navigation/native';
 import {
   getPerplexityEnabled,
   setPerplexityEnabled,
@@ -58,6 +59,7 @@ const AVAILABLE_TOOLS = [
 
 const PerplexitySettingsScreen = () => {
   const { colors } = useTheme();
+  const navigation = useNavigation();
   const [enabled, setEnabled] = useState(getPerplexityEnabled());
   const [apiKey, setApiKey] = useState(getPerplexityApiKey());
   const [baseUrl, setBaseUrl] = useState(getPerplexityBaseUrl());
@@ -176,6 +178,24 @@ const PerplexitySettingsScreen = () => {
         <View style={styles.settingRow}>
           <Text style={styles.label}>Enable Perplexity Search</Text>
           <Switch value={enabled} onValueChange={handleToggle} />
+        </View>
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>💡 Recommended: Use MCP</Text>
+          <Text style={styles.infoText}>
+            For better security and unified management, use Perplexity through
+            MCP (Model Context Protocol).
+          </Text>
+          <TouchableOpacity
+            style={styles.mcpButton}
+            onPress={() => navigation.navigate('MCPSettings' as never)}>
+            <Text style={styles.mcpButtonText}>
+              → Go to MCP Settings & Add Perplexity
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.infoFooter}>
+            Current configuration is client-side fallback mode.
+          </Text>
         </View>
 
         {enabled && (
@@ -481,6 +501,15 @@ const createStyles = (colors: ColorScheme) =>
       marginTop: 16,
       marginBottom: 16,
     },
+    infoBox: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 6,
+      padding: 16,
+      marginTop: 12,
+      marginBottom: 16,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
+    },
     infoTitle: {
       fontSize: 14,
       fontWeight: '600',
@@ -491,6 +520,24 @@ const createStyles = (colors: ColorScheme) =>
       fontSize: 13,
       color: colors.textSecondary,
       lineHeight: 20,
+      marginBottom: 12,
+    },
+    infoFooter: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      marginTop: 8,
+    },
+    mcpButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 6,
+      padding: 10,
+      alignItems: 'center',
+    },
+    mcpButtonText: {
+      color: '#ffffff',
+      fontSize: 14,
+      fontWeight: '500',
     },
     testButton: {
       backgroundColor: colors.primary,

@@ -912,11 +912,12 @@ export function setMCPEnabled(enabled: boolean) {
 export interface MCPServer {
   id: string;
   name: string;
-  url: string;
+  url: string; // For HTTP/OAuth servers, or stdio://command/args format for stdio
   apiKey: string;
   enabled: boolean;
   env?: Record<string, string>;
   authType?: 'apiKey' | 'oauth'; // Authentication type
+  transport?: 'http' | 'stdio'; // Transport type: http (default) or stdio
   oauthToken?: string; // OAuth access token
   oauthRefreshToken?: string; // OAuth refresh token
   oauthExpiry?: number; // Token expiry timestamp

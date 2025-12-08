@@ -92,6 +92,7 @@ import { useAppContext } from '../history/AppProvider.tsx';
 import { useTheme, ColorScheme } from '../theme';
 import { requestAllModelsByBedrockAPI } from '../api/bedrock-api-key.ts';
 import OpenAICompatConfigsSection from './OpenAICompatConfigsSection.tsx';
+import { getMCPEnabled, getMCPServers } from '../storage/StorageUtils.ts';
 
 const initUpgradeInfo: UpgradeInfo = {
   needUpgrade: false,
@@ -687,6 +688,20 @@ function SettingsScreen(): React.JSX.Element {
             }}
           />
         </View>
+
+        {getMCPEnabled() && (
+          <View style={styles.toolsStatusCard}>
+            <Text style={styles.toolsStatusTitle}>🔧 Backend Tools</Text>
+            <Text style={styles.toolsStatusText}>
+              {getMCPServers().filter(s => s.enabled).length} MCP servers
+              enabled
+            </Text>
+            <Text style={styles.toolsStatusHint}>
+              Configure in drawer menu → MCP Settings
+            </Text>
+          </View>
+        )}
+
         <TouchableOpacity
           activeOpacity={1}
           style={styles.itemContainer}
@@ -876,6 +891,30 @@ const createStyles = (colors: ColorScheme) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       marginVertical: 10,
+    },
+    toolsStatusCard: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 6,
+      padding: 14,
+      marginVertical: 12,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
+    },
+    toolsStatusTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 6,
+    },
+    toolsStatusText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    toolsStatusHint: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
     },
     proxySwitchContainer: {
       flexDirection: 'row',

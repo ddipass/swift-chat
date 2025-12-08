@@ -1,5 +1,21 @@
 /**
- * Built-in tools that work on all platforms
+ * Built-in Tools - 统一工具接口
+ *
+ * 工作模式：
+ * 1. 优先使用后端工具（通过 BackendToolsClient）
+ *    - 需要配置 apiUrl 和 apiKey
+ *    - 工具由后端 MCP Manager 管理
+ *    - 支持 MCP stdio/OAuth servers
+ *
+ * 2. 回退到客户端工具（直接调用）
+ *    - 当后端未配置或不可用时
+ *    - 工具直接在客户端执行
+ *    - 包括 Perplexity 直接 API 调用
+ *
+ * 使用场景：
+ * - 生产环境：推荐使用后端模式（更安全、统一管理）
+ * - 开发测试：可以使用客户端模式（快速测试）
+ * - 离线场景：自动回退到客户端模式
  */
 
 import {
@@ -368,6 +384,16 @@ const webFetchTool: BuiltInTool = {
  * Get all built-in tools
  */
 export function getBuiltInTools(): BuiltInTool[] {
+  // 检查是否使用后端工具
+  const apiUrl = getApiUrl();
+  const apiKey = getApiKey();
+
+  if (apiUrl && apiKey) {
+    // 使用后端工具（异步加载）
+    return [];
+  }
+
+  // 使用客户端工具（兼容模式）
   const tools = [webFetchTool];
 
   // Add Perplexity tools if enabled
@@ -378,21 +404,68 @@ export function getBuiltInTools(): BuiltInTool[] {
 }
 
 /**
+ * Get all built-in tools (async version for backend)
+ */
+export async function getBuiltInToolsAsync(): Promise<BuiltInTool[]> {
+  const { getApiUrl, getApiKey } = await import('../storage/StorageUtils');
+  const apiUrl = getApiUrl();
+  const apiKey = getApiKey();
+
+  if (!apiUrl || !apiKey) {
+    // 使用客户端工具
+    return getBuiltInTools();
+  }
+
+  // 使用后端工具
+  const { BackendToolsClient } = await import('./BackendToolsClient');
+  const client = new BackendToolsClient(apiUrl, apiKey);
+
+  try {
+    const backendTools = await client.listTools();
+
+    return backendTools.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      execute: async (args: Record<string, unknown>) => {
+        return await client.executeTool(tool.name, args);
+      },
+    }));
+  } catch (error) {
+    console.error('[BuiltInTools] Failed to load backend tools:', error);
+    // Fallback to client tools
+    return getBuiltInTools();
+  }
+}
+
+/**
  * Execute a built-in tool by name
  */
 export async function executeBuiltInTool(
   name: string,
   args: Record<string, unknown>
 ): Promise<unknown> {
-  const tool = getBuiltInTools().find(t => t.name === name);
+  // Try to get tools from backend first
+  const tools = await getBuiltInToolsAsync();
+  const tool = tools.find(t => t.name === name);
+
   if (!tool) {
     throw new Error(`Built-in tool not found: ${name}`);
   }
+
   return await tool.execute(args);
 }
 
 /**
  * Check if a tool is built-in
+ */
+export async function isBuiltInToolAsync(name: string): Promise<boolean> {
+  const tools = await getBuiltInToolsAsync();
+  return tools.some(t => t.name === name);
+}
+
+/**
+ * Check if a tool is built-in (sync version for compatibility)
  */
 export function isBuiltInTool(name: string): boolean {
   return getBuiltInTools().some(t => t.name === name);

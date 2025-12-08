@@ -26,6 +26,24 @@ import {
 } from '../storage/StorageUtils';
 import CustomTextInput from './CustomTextInput';
 import { startOAuthFlow, handleOAuthCallback } from '../mcp/MCPOAuth';
+import { BackendToolsClient } from '../mcp/BackendToolsClient';
+import { getApiUrl, getApiKey } from '../storage/StorageUtils';
+
+const syncMCPConfigToBackend = async (servers: MCPServer[]) => {
+  try {
+    const apiUrl = getApiUrl();
+    const apiKey = getApiKey();
+
+    if (!apiUrl || !apiKey) {
+      return; // 后端未配置，跳过同步
+    }
+
+    const client = new BackendToolsClient(apiUrl, apiKey);
+    await client.syncMCPConfig(servers);
+  } catch (error) {
+    console.error('[MCPSettings] Failed to sync config to backend:', error);
+  }
+};
 
 const MCPSettingsScreen = () => {
   const { colors } = useTheme();
@@ -42,6 +60,71 @@ const MCPSettingsScreen = () => {
   const [newServerAuthType, setNewServerAuthType] = useState<
     'apiKey' | 'oauth'
   >('apiKey');
+  const [backendStatus, setBackendStatus] = useState<
+    'checking' | 'online' | 'offline'
+  >('checking');
+
+  // Check backend status
+  useEffect(() => {
+    const checkBackend = async () => {
+      const apiUrl = getApiUrl();
+      const apiKey = getApiKey();
+
+      if (!apiUrl || !apiKey) {
+        setBackendStatus('offline');
+        return;
+      }
+
+      const client = new BackendToolsClient(apiUrl, apiKey);
+      const isOnline = await client.checkHealth();
+      setBackendStatus(isOnline ? 'online' : 'offline');
+    };
+
+    checkBackend();
+  }, []);
+
+  const handleAddPerplexity = () => {
+    // Check if Perplexity already exists
+    if (servers.some(s => s.name.toLowerCase() === 'perplexity')) {
+      if (Platform.OS === 'web') {
+        // @ts-expect-error - alert is available in web
+        alert('Perplexity MCP server already exists');
+      } else {
+        Alert.alert('Info', 'Perplexity MCP server already exists');
+      }
+      return;
+    }
+
+    const newServer: MCPServer = {
+      id: Date.now().toString(),
+      name: 'Perplexity',
+      url: 'stdio://npx/-y/@perplexity-ai/mcp-server',
+      apiKey: '',
+      enabled: true,
+      transport: 'stdio',
+      env: { PERPLEXITY_API_KEY: '' },
+    };
+
+    addMCPServer(newServer);
+    const updatedServers = [...servers, newServer];
+    setServers(updatedServers);
+
+    // 同步到后端
+    syncMCPConfigToBackend(updatedServers);
+
+    // Show alert to remind user to set API key
+    if (Platform.OS === 'web') {
+      // @ts-expect-error - alert is available in web
+      alert(
+        'Perplexity MCP added! Please set PERPLEXITY_API_KEY in environment variables.'
+      );
+    } else {
+      Alert.alert(
+        'Success',
+        'Perplexity MCP added! Please set PERPLEXITY_API_KEY in environment variables by editing the server.'
+      );
+    }
+  };
 
   // Listen for OAuth callback
   useEffect(() => {
@@ -209,11 +292,20 @@ const MCPSettingsScreen = () => {
     setNewServerUrl('');
     setNewServerApiKey('');
     setNewServerEnv('');
+
+    // 同步到后端
+    syncMCPConfigToBackend([...servers, newServer]);
   };
 
   const handleToggleServer = (serverId: string, enabled: boolean) => {
     updateMCPServer(serverId, { enabled });
-    setServers(servers.map(s => (s.id === serverId ? { ...s, enabled } : s)));
+    const updatedServers = servers.map(s =>
+      s.id === serverId ? { ...s, enabled } : s
+    );
+    setServers(updatedServers);
+
+    // 同步到后端
+    syncMCPConfigToBackend(updatedServers);
   };
 
   const handleRemoveServer = (serverId: string, serverName: string) => {
@@ -222,7 +314,11 @@ const MCPSettingsScreen = () => {
       const confirmed = window.confirm(`Remove server "${serverName}"?`);
       if (confirmed) {
         removeMCPServer(serverId);
-        setServers(servers.filter(s => s.id !== serverId));
+        const updatedServers = servers.filter(s => s.id !== serverId);
+        setServers(updatedServers);
+
+        // 同步到后端
+        syncMCPConfigToBackend(updatedServers);
       }
     } else {
       Alert.alert('Remove Server', `Remove server "${serverName}"?`, [
@@ -232,7 +328,11 @@ const MCPSettingsScreen = () => {
           style: 'destructive',
           onPress: () => {
             removeMCPServer(serverId);
-            setServers(servers.filter(s => s.id !== serverId));
+            const updatedServers = servers.filter(s => s.id !== serverId);
+            setServers(updatedServers);
+
+            // 同步到后端
+            syncMCPConfigToBackend(updatedServers);
           },
         },
       ]);
@@ -262,6 +362,36 @@ const MCPSettingsScreen = () => {
 
           {mcpEnabled && (
             <>
+              <View style={styles.infoBox}>
+                <View style={styles.statusRow}>
+                  <Text style={styles.infoText}>
+                    ℹ️ MCP (Model Context Protocol) provides unified tool
+                    management.
+                  </Text>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      backendStatus === 'online' && styles.statusOnline,
+                      backendStatus === 'offline' && styles.statusOffline,
+                    ]}>
+                    <Text style={styles.statusText}>
+                      {backendStatus === 'checking'
+                        ? '...'
+                        : backendStatus === 'online'
+                        ? '● Online'
+                        : '○ Offline'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.infoTextSmall}>
+                  {'\n'}• Perplexity: Click "Add Perplexity" for quick setup
+                  {'\n'}• Other services: Click "Add Server" for manual
+                  configuration
+                  {'\n\n'}
+                  Tools will be executed through backend for better security.
+                </Text>
+              </View>
+
               <CustomTextInput
                 label="Max Tool Call Iterations"
                 value={String(mcpMaxIterations)}
@@ -290,7 +420,12 @@ const MCPSettingsScreen = () => {
                 <View key={server.id} style={styles.serverItem}>
                   <View style={styles.serverRow}>
                     <View style={styles.serverInfo}>
-                      <Text style={styles.serverName}>{server.name}</Text>
+                      <Text style={styles.serverName}>
+                        {server.name}
+                        {server.transport === 'stdio' && (
+                          <Text style={styles.transportBadge}> [stdio]</Text>
+                        )}
+                      </Text>
                       <Text style={styles.serverUrl}>{server.url}</Text>
                       {server.authType === 'oauth' && server.oauthToken && (
                         <Text style={styles.serverAuth}>
@@ -330,12 +465,22 @@ const MCPSettingsScreen = () => {
               ))}
 
               {!showAddServer && (
-                <TouchableOpacity
-                  style={styles.addButton}
-                  activeOpacity={0.7}
-                  onPress={() => setShowAddServer(true)}>
-                  <Text style={styles.addButtonText}>+ Add Server</Text>
-                </TouchableOpacity>
+                <View style={styles.addButtonsContainer}>
+                  <TouchableOpacity
+                    style={[styles.addButton, styles.addButtonPrimary]}
+                    activeOpacity={0.7}
+                    onPress={() => setShowAddServer(true)}>
+                    <Text style={styles.addButtonText}>+ Add Server</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.addButton, styles.addButtonSecondary]}
+                    activeOpacity={0.7}
+                    onPress={handleAddPerplexity}>
+                    <Text style={styles.addButtonTextSecondary}>
+                      + Add Perplexity
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               )}
 
               {showAddServer && (
@@ -434,6 +579,48 @@ const MCPSettingsScreen = () => {
                   </View>
                 </View>
               )}
+
+              <View style={styles.debugSection}>
+                <Text style={styles.debugTitle}>🔧 Debug Information</Text>
+                <Text style={styles.debugLabel}>MCP Status:</Text>
+                <Text style={styles.debugItem}>
+                  • Enabled: {mcpEnabled ? '✅ Yes' : '❌ No'}
+                </Text>
+                <Text style={styles.debugItem}>
+                  • Max Iterations: {mcpMaxIterations}
+                </Text>
+                <Text style={styles.debugItem}>
+                  • Total Servers: {servers.length}
+                </Text>
+                <Text style={styles.debugItem}>
+                  • Enabled Servers: {servers.filter(s => s.enabled).length}
+                </Text>
+                <Text style={styles.debugLabel}>Backend Status:</Text>
+                <Text
+                  style={
+                    backendStatus === 'online'
+                      ? styles.debugSuccess
+                      : styles.debugError
+                  }>
+                  {backendStatus === 'online' ? '✅' : '❌'}{' '}
+                  {backendStatus === 'checking'
+                    ? 'Checking...'
+                    : backendStatus === 'online'
+                    ? 'Backend Online'
+                    : 'Backend Offline'}
+                </Text>
+                {servers.length > 0 && (
+                  <>
+                    <Text style={styles.debugLabel}>Server Details:</Text>
+                    {servers.map(server => (
+                      <Text key={server.id} style={styles.debugItem}>
+                        • {server.name} [{server.transport || 'http'}]:{' '}
+                        {server.enabled ? '✅' : '❌'}
+                      </Text>
+                    ))}
+                  </>
+                )}
+              </View>
             </>
           )}
         </ScrollView>
@@ -483,6 +670,49 @@ const createStyles = (colors: ColorScheme) =>
       borderRadius: 6,
       marginBottom: 16,
     },
+    infoBox: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 6,
+      padding: 14,
+      marginTop: 8,
+      marginBottom: 16,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
+    },
+    statusRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      backgroundColor: colors.background,
+    },
+    statusOnline: {
+      backgroundColor: '#E8F5E9',
+    },
+    statusOffline: {
+      backgroundColor: '#FFEBEE',
+    },
+    statusText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    infoText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      flex: 1,
+      marginRight: 8,
+    },
+    infoTextSmall: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
     emptyText: {
       fontSize: 14,
       color: colors.textSecondary,
@@ -508,6 +738,11 @@ const createStyles = (colors: ColorScheme) =>
       fontWeight: '500',
       color: colors.text,
       marginBottom: 4,
+    },
+    transportBadge: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.primary,
     },
     serverUrl: {
       fontSize: 13,
@@ -544,15 +779,32 @@ const createStyles = (colors: ColorScheme) =>
       fontSize: 14,
       fontWeight: '500',
     },
+    addButtonsContainer: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 4,
+    },
     addButton: {
-      backgroundColor: colors.primary,
+      flex: 1,
       padding: 14,
       borderRadius: 6,
       alignItems: 'center',
-      marginTop: 4,
+    },
+    addButtonPrimary: {
+      backgroundColor: colors.primary,
+    },
+    addButtonSecondary: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.primary,
     },
     addButtonText: {
       color: '#ffffff',
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    addButtonTextSecondary: {
+      color: colors.primary,
       fontSize: 16,
       fontWeight: '500',
     },
@@ -620,6 +872,43 @@ const createStyles = (colors: ColorScheme) =>
       color: '#ffffff',
       fontSize: 16,
       fontWeight: '500',
+    },
+    debugSection: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 6,
+      padding: 16,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    debugTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    debugLabel: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.text,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    debugItem: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginLeft: 8,
+      marginVertical: 2,
+    },
+    debugSuccess: {
+      fontSize: 12,
+      color: '#4CAF50',
+      marginLeft: 8,
+    },
+    debugError: {
+      fontSize: 12,
+      color: '#F44336',
+      marginLeft: 8,
     },
   });
 

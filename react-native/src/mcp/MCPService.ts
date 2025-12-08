@@ -2,12 +2,14 @@ import { MCPClient, MCPTool } from './MCPClient';
 import { getMCPEnabled, getMCPServers } from '../storage/StorageUtils';
 import {
   getBuiltInTools,
+  getBuiltInToolsAsync,
   executeBuiltInTool,
   isBuiltInTool,
 } from './BuiltInTools';
 
 const mcpClients = new Map<string, MCPClient>();
 let cachedTools: MCPTool[] = [];
+let cachedBuiltInTools: MCPTool[] = [];
 
 function getMCPClients(): MCPClient[] {
   const enabled = getMCPEnabled();
@@ -40,17 +42,30 @@ function getMCPClients(): MCPClient[] {
 }
 
 export async function getMCPTools(): Promise<MCPTool[]> {
-  // Always include built-in tools
-  const builtInTools = getBuiltInTools().map(tool => ({
-    name: tool.name,
-    description: tool.description,
-    inputSchema: tool.inputSchema,
-  }));
+  // Load built-in tools (async to support backend)
+  if (cachedBuiltInTools.length === 0) {
+    try {
+      const builtInTools = await getBuiltInToolsAsync();
+      cachedBuiltInTools = builtInTools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+      }));
+    } catch (error) {
+      console.error('Failed to load built-in tools:', error);
+      // Fallback to sync version
+      cachedBuiltInTools = getBuiltInTools().map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+      }));
+    }
+  }
 
   // Add external MCP tools if enabled
   const clients = getMCPClients();
   if (clients.length === 0) {
-    return builtInTools;
+    return cachedBuiltInTools;
   }
 
   if (cachedTools.length === 0) {
@@ -66,11 +81,12 @@ export async function getMCPTools(): Promise<MCPTool[]> {
     cachedTools = allTools;
   }
 
-  return [...builtInTools, ...cachedTools];
+  return [...cachedBuiltInTools, ...cachedTools];
 }
 
 export function refreshMCPTools() {
   cachedTools = [];
+  cachedBuiltInTools = [];
   mcpClients.clear();
 }
 

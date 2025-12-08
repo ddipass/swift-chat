@@ -232,6 +232,44 @@ can enable the **Use Proxy** option to forward your requests.
 
 </details>
 
+### MCP (Model Context Protocol)
+
+<details>
+<summary><b>🔧 Configure MCP Tools (Click to expand)</b></summary>
+
+MCP provides unified management for external tools like Perplexity, web search, and more.
+
+#### Quick Setup - Perplexity
+
+1. Navigate to **Drawer Menu** → **MCP Settings**
+2. Enable MCP
+3. Click **"Add Perplexity"** button
+4. Edit the server and set your `PERPLEXITY_API_KEY` in environment variables
+5. Enable the server
+
+#### Manual Setup - Other MCP Servers
+
+1. Navigate to **Drawer Menu** → **MCP Settings**
+2. Enable MCP
+3. Click **"Add Server"**
+4. Configure:
+   - **Name**: Server name
+   - **URL**: For stdio servers use format `stdio://command/arg1/arg2`
+   - **Transport**: Choose `stdio` or `http`
+   - **Environment Variables**: Add as JSON object (e.g., `{"API_KEY": "your-key"}`)
+
+#### Supported MCP Servers
+
+- **Perplexity** (stdio): Web search, research, and reasoning
+- **Notion** (OAuth): Access Notion workspace
+- **GitHub** (OAuth): Repository operations
+- **Filesystem** (stdio): Local file operations
+- Any MCP-compatible server
+
+For more details, see [MCP Documentation](https://modelcontextprotocol.io)
+
+</details>
+
 ## Key Features
 
 - Real-time streaming chat with AI

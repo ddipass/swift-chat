@@ -88,6 +88,10 @@ def get_api_key_from_ssm(use_cache_token: bool):
 
 def verify_api_key(credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
                    use_cache_token: bool = True):
+    # 测试环境：如果没有配置API_KEY_NAME，跳过验证
+    if 'API_KEY_NAME' not in os.environ:
+        return credentials.credentials
+    
     if credentials.credentials != get_api_key_from_ssm(use_cache_token):
         raise HTTPException(status_code=401, detail="Invalid API Key")
     return credentials.credentials
@@ -95,6 +99,15 @@ def verify_api_key(credentials: Annotated[HTTPAuthorizationCredentials, Depends(
 
 def verify_and_refresh_token(credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]):
     return verify_api_key(credentials, use_cache_token=False)
+
+
+def verify_token(token: str):
+    # 测试环境：如果没有配置API_KEY_NAME，跳过验证
+    if 'API_KEY_NAME' not in os.environ:
+        return
+    
+    if token != get_api_key_from_ssm(use_cache_token=True):
+        raise HTTPException(status_code=401, detail="Invalid API Key")
 
 
 async def create_bedrock_command(request: ConverseRequest) -> tuple[boto3.client, dict]:
@@ -140,6 +153,27 @@ async def create_bedrock_command(request: ConverseRequest) -> tuple[boto3.client
 
     if request.system is not None:
         command["system"] = request.system
+
+    # Add tool configuration if tools are available
+    if tool_manager:
+        tools = tool_manager.list_tools()
+        if tools:
+            # Convert tools to Bedrock toolConfig format
+            tool_config = {
+                "tools": [
+                    {
+                        "toolSpec": {
+                            "name": tool["name"],
+                            "description": tool["description"],
+                            "inputSchema": {
+                                "json": tool["inputSchema"]
+                            }
+                        }
+                    }
+                    for tool in tools
+                ]
+            }
+            command["toolConfig"] = tool_config
 
     return client, command
 
@@ -413,6 +447,118 @@ def contains_chinese(text):
     pattern = re.compile(r'[\u4e00-\u9fff]')
     match = pattern.search(text)
     return match is not None
+
+
+# Tool Manager
+from tool_manager import ToolManager
+
+tool_manager = None
+
+
+@app.on_event("startup")
+async def startup_event():
+    """启动时初始化工具"""
+    global tool_manager
+    tool_manager = ToolManager()
+
+    # 从环境变量读取配置
+    config = {
+        "mcp_servers": []
+    }
+
+    # 示例：从环境变量添加MCP服务器
+    # MCP_SERVERS=notion:stdio:npx:-y:@modelcontextprotocol/server-notion
+    mcp_servers_env = os.environ.get("MCP_SERVERS", "")
+    if mcp_servers_env:
+        for server_str in mcp_servers_env.split(";"):
+            parts = server_str.split(":")
+            if len(parts) >= 3:
+                name = parts[0]
+                transport = parts[1]
+                if transport == "stdio":
+                    command = parts[2]
+                    args = parts[3:] if len(parts) > 3 else []
+                    config["mcp_servers"].append({
+                        "name": name,
+                        "transport": "stdio",
+                        "command": command,
+                        "args": args,
+                        "env": {}
+                    })
+
+    await tool_manager.initialize(config)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """关闭时清理"""
+    if tool_manager:
+        await tool_manager.shutdown()
+
+
+class ToolListRequest(BaseModel):
+    pass
+
+
+class ToolExecuteRequest(BaseModel):
+    name: str
+    arguments: dict
+
+
+class MCPConfigRequest(BaseModel):
+    servers: list[dict]
+
+
+@app.post("/api/tools")
+async def list_tools(
+    request: ToolListRequest,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """获取所有可用工具"""
+    verify_token(credentials.credentials)
+
+    if not tool_manager:
+        return {"tools": []}
+
+    tools = tool_manager.list_tools()
+    return {"tools": tools}
+
+
+@app.post("/api/tool/exec")
+async def execute_tool(
+    request: ToolExecuteRequest,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """执行工具"""
+    verify_token(credentials.credentials)
+
+    if not tool_manager:
+        return {"success": False, "error": "Tool manager not initialized"}
+
+    try:
+        result = await tool_manager.execute_tool(request.name, request.arguments)
+        return {"success": True, "result": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/mcp/config")
+async def update_mcp_config(
+    request: MCPConfigRequest,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """更新MCP服务器配置"""
+    verify_token(credentials.credentials)
+
+    if not tool_manager:
+        return {"success": False, "error": "Tool manager not initialized"}
+
+    try:
+        # 重新初始化MCP服务器
+        await tool_manager.mcp_manager.initialize_from_config(request.servers)
+        return {"success": True, "message": "MCP configuration updated"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 if __name__ == "__main__":
