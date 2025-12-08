@@ -24,6 +24,8 @@ import {
   getApiUrl,
   getDeepSeekApiKey,
   getHapticEnabled,
+  getDebugEnabled,
+  saveDebugEnabled,
   getImageModel,
   getImageSize,
   getModelUsage,
@@ -117,6 +119,7 @@ function SettingsScreen(): React.JSX.Element {
   const [region, setRegion] = useState(getRegion);
   const [imageSize, setImageSize] = useState(getImageSize);
   const [hapticEnabled, setHapticEnabled] = useState(getHapticEnabled);
+  const [debugEnabled, setDebugEnabled] = useState(getDebugEnabled);
   const navigation = useNavigation<NavigationProp<RouteParamList>>();
   const [textModels, setTextModels] = useState<Model[]>(allModel.textModel);
   const [selectedTextModel, setSelectedTextModel] =
@@ -674,6 +677,16 @@ function SettingsScreen(): React.JSX.Element {
           }}
           placeholder="Select image size"
         />
+        <View style={styles.switchContainer}>
+          <Text style={styles.label}>Enable Debug</Text>
+          <Switch
+            value={debugEnabled}
+            onValueChange={value => {
+              setDebugEnabled(value);
+              saveDebugEnabled(value);
+            }}
+          />
+        </View>
         <TouchableOpacity
           activeOpacity={1}
           style={styles.itemContainer}

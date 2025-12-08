@@ -65,22 +65,43 @@ export async function startOAuthFlow(server: MCPServer): Promise<void> {
 
     console.log('[OAuth] Auth URL:', authUrl);
 
-    // Check if URL can be opened
-    const canOpen = await Linking.canOpenURL(authUrl);
-    console.log('[OAuth] Can open URL:', canOpen);
+    try {
+      // Check if URL can be opened
+      const canOpen = await Linking.canOpenURL(authUrl);
+      console.log('[OAuth] Can open URL:', canOpen);
 
-    if (!canOpen) {
-      throw new Error('Cannot open authorization URL');
+      if (!canOpen) {
+        throw new Error('Cannot open authorization URL');
+      }
+
+      // Open browser
+      await Linking.openURL(authUrl);
+      console.log('[OAuth] URL opened');
+    } catch (linkingError) {
+      console.error('[OAuth] Linking Error:', linkingError);
+
+      // Provide detailed error information
+      const error =
+        linkingError instanceof Error
+          ? linkingError
+          : new Error(String(linkingError));
+      const errorDetails = `
+Error: ${error.message}
+Type: ${error.name}
+Auth URL: ${authUrl}
+
+This error often occurs when:
+1. The URL scheme is not properly configured
+2. React Native's Linking module has internal issues (blobId error)
+3. The browser cannot be opened
+
+Stack: ${error.stack || 'No stack trace'}
+      `.trim();
+
+      throw new Error(errorDetails);
     }
-
-    // Open browser
-    await Linking.openURL(authUrl);
-    console.log('[OAuth] URL opened');
   } catch (error) {
     console.error('[OAuth] Error:', error);
-    if (error instanceof Error) {
-      throw new Error(`Authorization failed: ${error.message}`);
-    }
     throw error;
   }
 }

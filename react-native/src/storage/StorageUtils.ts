@@ -45,6 +45,7 @@ const messageListKey = keyPrefix + 'messageList';
 const sessionIdPrefix = keyPrefix + 'sessionId/';
 const currentSessionIdKey = keyPrefix + 'currentSessionId';
 const hapticEnabledKey = keyPrefix + 'hapticEnabled';
+const debugEnabledKey = keyPrefix + 'debugEnabled';
 const apiUrlKey = keyPrefix + 'apiUrlKey';
 const apiKeyTag = keyPrefix + 'apiKeyTag';
 const ollamaApiUrlKey = keyPrefix + 'ollamaApiUrlKey';
@@ -261,6 +262,14 @@ export function saveHapticEnabled(enabled: boolean) {
 
 export function getHapticEnabled() {
   return storage.getBoolean(hapticEnabledKey) ?? true;
+}
+
+export function saveDebugEnabled(enabled: boolean) {
+  storage.set(debugEnabledKey, enabled);
+}
+
+export function getDebugEnabled() {
+  return storage.getBoolean(debugEnabledKey) ?? false;
 }
 
 export function saveApiUrl(apiUrl: string) {

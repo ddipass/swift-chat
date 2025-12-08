@@ -13,7 +13,7 @@ import {
   saveTextModel,
 } from '../storage/StorageUtils';
 import { getPerplexityTools } from './PerplexityTools';
-import { createSuccessDebug } from './ToolDebugUtils';
+import { createSuccessDebug, createErrorDebug } from './ToolDebugUtils';
 
 export interface BuiltInTool {
   name: string;
@@ -347,7 +347,19 @@ const webFetchTool: BuiltInTool = {
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       console.error('[web_fetch] Error:', errMsg);
-      return { error: `Failed to fetch: ${errMsg}` };
+      return {
+        error: `Failed to fetch: ${errMsg}`,
+        _debug: createErrorDebug(
+          'web_fetch',
+          error instanceof Error ? error : errMsg,
+          {
+            url: String(args.url),
+            mode: getContentProcessingMode(),
+            summaryModel: getSummaryModel()?.modelName || 'not configured',
+          },
+          startTime
+        ),
+      };
     }
   },
 };

@@ -122,9 +122,21 @@ const PerplexitySettingsScreen = () => {
         duration: Date.now() - startTime,
       });
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      let detailedMessage = `${errorMsg}`;
+      if (errorStack) {
+        detailedMessage += `\n\nStack: ${errorStack
+          .split('\n')
+          .slice(0, 3)
+          .join('\n')}`;
+      }
+      detailedMessage += `\n\nAPI URL: ${baseUrl}/search`;
+
       setTestResult({
         success: false,
-        message: error instanceof Error ? error.message : String(error),
+        message: detailedMessage,
       });
     } finally {
       setTesting(false);
@@ -319,6 +331,20 @@ const PerplexitySettingsScreen = () => {
             <View style={styles.debugSection}>
               <Text style={styles.debugTitle}>🔧 Debug Information</Text>
 
+              <Text style={styles.debugLabel}>Configuration Status:</Text>
+              <Text style={styles.debugItem}>
+                • Enabled: {enabled ? '✅ Yes' : '❌ No'}
+              </Text>
+              <Text style={styles.debugItem}>
+                • API Key: {apiKey ? '✅ Configured' : '❌ Not configured'}
+              </Text>
+              <Text style={styles.debugItem}>
+                • Selected Tools:{' '}
+                {enabledTools.length > 0
+                  ? `✅ ${enabledTools.join(', ')}`
+                  : '❌ None'}
+              </Text>
+
               <Text style={styles.debugLabel}>
                 Base URL: <Text style={styles.debugValue}>{baseUrl}</Text>
               </Text>
@@ -334,7 +360,7 @@ const PerplexitySettingsScreen = () => {
                 ))
               ) : (
                 <Text style={styles.debugItem}>
-                  No tools registered (Enable Perplexity and select tools)
+                  ⚠️ No tools registered - Check configuration above
                 </Text>
               )}
 

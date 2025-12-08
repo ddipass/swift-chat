@@ -2,6 +2,8 @@
  * Unified debug information for all tools
  */
 
+import { getDebugEnabled } from '../storage/StorageUtils';
+
 export interface ToolDebugInfo {
   tool: string;
   timestamp: string;
@@ -61,7 +63,10 @@ export function createSuccessDebug(
   toolName: string,
   details: Record<string, unknown>,
   startTime?: number
-): ToolDebugInfo {
+): ToolDebugInfo | undefined {
+  if (!getDebugEnabled()) {
+    return undefined;
+  }
   return createToolDebug(toolName, details, undefined, startTime);
 }
 
@@ -73,6 +78,9 @@ export function createErrorDebug(
   error: Error | string,
   details: Record<string, unknown> = {},
   startTime?: number
-): ToolDebugInfo {
+): ToolDebugInfo | undefined {
+  if (!getDebugEnabled()) {
+    return undefined;
+  }
   return createToolDebug(toolName, details, error, startTime);
 }
