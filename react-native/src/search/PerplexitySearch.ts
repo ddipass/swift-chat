@@ -37,10 +37,11 @@ export interface PerplexityConfig {
 
 export class PerplexitySearchClient {
   private apiKey: string;
-  private baseUrl = 'https://api.perplexity.ai';
+  private baseUrl: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, baseUrl = 'https://api.perplexity.ai') {
     this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
   }
 
   /**

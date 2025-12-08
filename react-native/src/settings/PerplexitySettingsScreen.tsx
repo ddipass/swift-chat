@@ -103,7 +103,7 @@ const PerplexitySettingsScreen = () => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 60 }}>
+        contentContainerStyle={styles.contentContainer}>
         <View style={styles.settingRow}>
           <Text style={styles.label}>Enable Perplexity Search</Text>
           <Switch value={enabled} onValueChange={handleToggle} />
@@ -164,7 +164,7 @@ const PerplexitySettingsScreen = () => {
                         {customDesc && (
                           <TouchableOpacity
                             onPress={() => handleResetDescription(tool.id)}
-                            style={{ marginTop: 8 }}>
+                            style={styles.resetButtonContainer}>
                             <Text style={styles.resetButton}>
                               Reset to default
                             </Text>
@@ -235,6 +235,9 @@ const createStyles = (colors: ColorScheme) =>
       flex: 1,
       padding: 20,
     },
+    contentContainer: {
+      paddingBottom: 60,
+    },
     settingRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -296,6 +299,9 @@ const createStyles = (colors: ColorScheme) =>
       fontSize: 12,
       color: colors.primary,
       marginTop: 4,
+    },
+    resetButtonContainer: {
+      marginTop: 8,
     },
     toolDescription: {
       fontSize: 13,

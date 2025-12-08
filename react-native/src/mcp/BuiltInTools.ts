@@ -39,7 +39,7 @@ function cleanHTMLWithRegex(html: string): string {
   removeElements.forEach(tag => {
     const regex = new RegExp(
       `<${tag}\\b[^<]*(?:(?!<\\/${tag}>)<[^<]*)*<\\/${tag}>`,
-      'gi',
+      'gi'
     );
     cleaned = cleaned.replace(regex, '');
   });
@@ -58,7 +58,7 @@ function cleanHTMLWithRegex(html: string): string {
  */
 async function summarizeHTMLWithAI(
   html: string,
-  url: string,
+  url: string
 ): Promise<{
   content: string;
   processedBy: string;
@@ -99,7 +99,7 @@ async function summarizeHTMLWithAI(
     if (needModelSwitch) {
       console.log(
         '[web_fetch] Switching to summary model:',
-        summaryModel.modelName,
+        summaryModel.modelName
       );
       saveTextModel(summaryModel);
     } else {
@@ -113,7 +113,7 @@ async function summarizeHTMLWithAI(
       '[web_fetch] HTML length:',
       html.length,
       'truncated to:',
-      truncatedHtml.length,
+      truncatedHtml.length
     );
 
     let summary = '';
@@ -127,7 +127,7 @@ async function summarizeHTMLWithAI(
         const timeoutId = setTimeout(() => {
           if (!isComplete) {
             console.warn(
-              '[web_fetch] AI summarization timeout - callback never completed',
+              '[web_fetch] AI summarization timeout - callback never completed'
             );
             reject(new Error('AI summarization timeout after 90 seconds'));
           }
@@ -155,7 +155,7 @@ async function summarizeHTMLWithAI(
               '[web_fetch] Callback invoked - complete:',
               complete,
               'length:',
-              result.length,
+              result.length
             );
 
             if (needStop || hasError) {
@@ -173,11 +173,11 @@ async function summarizeHTMLWithAI(
               isComplete = true;
               console.log(
                 '[web_fetch] AI summarization completed, final length:',
-                summary.length,
+                summary.length
               );
               resolve();
             }
-          },
+          }
         );
 
         // invokeBedrockWithCallBack doesn't return a promise, so we need to wait
@@ -188,7 +188,7 @@ async function summarizeHTMLWithAI(
       if (needModelSwitch) {
         console.log(
           '[web_fetch] Restoring original model:',
-          originalModel.modelName,
+          originalModel.modelName
         );
         saveTextModel(originalModel);
       }
@@ -197,7 +197,7 @@ async function summarizeHTMLWithAI(
     // Check if summary is empty
     if (!summary || summary.trim().length === 0) {
       console.warn(
-        '[web_fetch] AI returned empty summary, falling back to regex',
+        '[web_fetch] AI returned empty summary, falling back to regex'
       );
       throw new Error('AI returned empty summary');
     }
@@ -338,7 +338,7 @@ const webFetchTool: BuiltInTool = {
               htmlLength: processingInfo.htmlLength,
               truncated,
             },
-            startTime,
+            startTime
           ),
         };
       }
@@ -360,18 +360,7 @@ export function getBuiltInTools(): BuiltInTool[] {
 
   // Add Perplexity tools if enabled
   const perplexityTools = getPerplexityTools();
-  console.log('[BuiltInTools] Perplexity tools count:', perplexityTools.length);
-  console.log(
-    '[BuiltInTools] Perplexity tool names:',
-    perplexityTools.map(t => t.name),
-  );
   tools.push(...perplexityTools);
-
-  console.log('[BuiltInTools] Total built-in tools:', tools.length);
-  console.log(
-    '[BuiltInTools] Tool names:',
-    tools.map(t => t.name),
-  );
 
   return tools;
 }
@@ -381,7 +370,7 @@ export function getBuiltInTools(): BuiltInTool[] {
  */
 export async function executeBuiltInTool(
   name: string,
-  args: Record<string, unknown>,
+  args: Record<string, unknown>
 ): Promise<unknown> {
   const tool = getBuiltInTools().find(t => t.name === name);
   if (!tool) {

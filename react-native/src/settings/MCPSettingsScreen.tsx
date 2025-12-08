@@ -221,7 +221,7 @@ const MCPSettingsScreen = () => {
         style={styles.keyboardView}>
         <ScrollView
           style={styles.container}
-          contentContainerStyle={{ paddingBottom: 60 }}>
+          contentContainerStyle={styles.contentContainer}>
           <View style={styles.settingRow}>
             <Text style={styles.label}>Enable MCP</Text>
             <Switch
@@ -427,6 +427,9 @@ const createStyles = (colors: ColorScheme) =>
     container: {
       flex: 1,
       padding: 20,
+    },
+    contentContainer: {
+      paddingBottom: 60,
     },
     settingRow: {
       flexDirection: 'row',

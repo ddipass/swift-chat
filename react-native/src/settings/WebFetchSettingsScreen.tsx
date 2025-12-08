@@ -93,7 +93,7 @@ const WebFetchSettingsScreen = () => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 60 }}>
+        contentContainerStyle={styles.contentContainer}>
         <CustomTextInput
           label="Timeout (seconds)"
           value={timeout}
@@ -273,6 +273,9 @@ const createStyles = (colors: ColorScheme) =>
     container: {
       flex: 1,
       padding: 20,
+    },
+    contentContainer: {
+      paddingBottom: 60,
     },
     label: {
       fontSize: 16,

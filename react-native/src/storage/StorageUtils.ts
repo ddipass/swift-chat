@@ -821,6 +821,7 @@ export function generateOpenAICompatModels(
 // Perplexity Search Configuration
 const perplexityEnabledKey = keyPrefix + 'perplexityEnabled';
 const perplexityApiKeyTag = keyPrefix + 'perplexityApiKeyTag';
+const perplexityBaseUrlKey = keyPrefix + 'perplexityBaseUrl';
 const perplexityEnabledToolsKey = keyPrefix + 'perplexityEnabledTools';
 
 export function getPerplexityEnabled(): boolean {
@@ -837,6 +838,14 @@ export function getPerplexityApiKey(): string {
 
 export function savePerplexityApiKey(key: string) {
   storage.set(perplexityApiKeyTag, key);
+}
+
+export function getPerplexityBaseUrl(): string {
+  return storage.getString(perplexityBaseUrlKey) || 'https://api.perplexity.ai';
+}
+
+export function savePerplexityBaseUrl(url: string) {
+  storage.set(perplexityBaseUrlKey, url);
 }
 
 export function getPerplexityEnabledTools(): string[] {
