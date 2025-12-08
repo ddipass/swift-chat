@@ -6,6 +6,7 @@ import {
   getPerplexityToolDescriptions,
 } from '../storage/StorageUtils';
 import { PerplexitySearchClient } from '../search/PerplexitySearch';
+import { createSuccessDebug, createErrorDebug } from './ToolDebugUtils';
 
 // Default descriptions
 const DEFAULT_DESCRIPTIONS = {
@@ -45,9 +46,18 @@ function createSearchTool(customDescription?: string): BuiltInTool {
       required: ['query'],
     },
     execute: async (args: Record<string, unknown>) => {
+      const startTime = Date.now();
       const apiKey = getPerplexityApiKey();
       if (!apiKey) {
-        return { error: 'Perplexity API key not configured' };
+        return {
+          error: 'Perplexity API key not configured',
+          _debug: createErrorDebug(
+            'perplexity_search',
+            'API key not configured',
+            { query: String(args.query) },
+            startTime
+          ),
+        };
       }
 
       try {
@@ -69,11 +79,31 @@ function createSearchTool(customDescription?: string): BuiltInTool {
         return {
           results,
           formatted: client.formatResults(results),
+          _debug: createSuccessDebug(
+            'perplexity_search',
+            {
+              query: String(args.query),
+              resultCount: results.length,
+              timeout: 30000,
+            },
+            startTime
+          ),
         };
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.error('[perplexity_search] Error:', errMsg);
-        return { error: `Search failed: ${errMsg}` };
+        return {
+          error: `Search failed: ${errMsg}`,
+          _debug: createErrorDebug(
+            'perplexity_search',
+            error instanceof Error ? error : errMsg,
+            {
+              query: String(args.query),
+              timeout: 30000,
+            },
+            startTime
+          ),
+        };
       }
     },
   };
@@ -97,20 +127,52 @@ function createAskTool(customDescription?: string): BuiltInTool {
       required: ['query'],
     },
     execute: async (args: Record<string, unknown>) => {
+      const startTime = Date.now();
       const apiKey = getPerplexityApiKey();
       if (!apiKey) {
-        return { error: 'Perplexity API key not configured' };
+        return {
+          error: 'Perplexity API key not configured',
+          _debug: createErrorDebug(
+            'perplexity_ask',
+            'API key not configured',
+            { query: String(args.query) },
+            startTime
+          ),
+        };
       }
 
       try {
         const client = new PerplexitySearchClient(apiKey);
         const answer = await client.ask({ query: String(args.query) }, 60000);
 
-        return { answer };
+        return {
+          answer,
+          _debug: createSuccessDebug(
+            'perplexity_ask',
+            {
+              query: String(args.query),
+              model: 'sonar-pro',
+              timeout: 60000,
+            },
+            startTime
+          ),
+        };
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.error('[perplexity_ask] Error:', errMsg);
-        return { error: `Ask failed: ${errMsg}` };
+        return {
+          error: `Ask failed: ${errMsg}`,
+          _debug: createErrorDebug(
+            'perplexity_ask',
+            error instanceof Error ? error : errMsg,
+            {
+              query: String(args.query),
+              model: 'sonar-pro',
+              timeout: 60000,
+            },
+            startTime
+          ),
+        };
       }
     },
   };
@@ -134,9 +196,18 @@ function createResearchTool(customDescription?: string): BuiltInTool {
       required: ['query'],
     },
     execute: async (args: Record<string, unknown>) => {
+      const startTime = Date.now();
       const apiKey = getPerplexityApiKey();
       if (!apiKey) {
-        return { error: 'Perplexity API key not configured' };
+        return {
+          error: 'Perplexity API key not configured',
+          _debug: createErrorDebug(
+            'perplexity_research',
+            'API key not configured',
+            { query: String(args.query) },
+            startTime
+          ),
+        };
       }
 
       try {
@@ -146,11 +217,34 @@ function createResearchTool(customDescription?: string): BuiltInTool {
           300000
         );
 
-        return { report };
+        return {
+          report,
+          _debug: createSuccessDebug(
+            'perplexity_research',
+            {
+              query: String(args.query),
+              model: 'sonar-deep-research',
+              timeout: 300000,
+            },
+            startTime
+          ),
+        };
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.error('[perplexity_research] Error:', errMsg);
-        return { error: `Research failed: ${errMsg}` };
+        return {
+          error: `Research failed: ${errMsg}`,
+          _debug: createErrorDebug(
+            'perplexity_research',
+            error instanceof Error ? error : errMsg,
+            {
+              query: String(args.query),
+              model: 'sonar-deep-research',
+              timeout: 300000,
+            },
+            startTime
+          ),
+        };
       }
     },
   };
@@ -174,9 +268,18 @@ function createReasonTool(customDescription?: string): BuiltInTool {
       required: ['query'],
     },
     execute: async (args: Record<string, unknown>) => {
+      const startTime = Date.now();
       const apiKey = getPerplexityApiKey();
       if (!apiKey) {
-        return { error: 'Perplexity API key not configured' };
+        return {
+          error: 'Perplexity API key not configured',
+          _debug: createErrorDebug(
+            'perplexity_reason',
+            'API key not configured',
+            { query: String(args.query) },
+            startTime
+          ),
+        };
       }
 
       try {
@@ -186,11 +289,34 @@ function createReasonTool(customDescription?: string): BuiltInTool {
           90000
         );
 
-        return { reasoning };
+        return {
+          reasoning,
+          _debug: createSuccessDebug(
+            'perplexity_reason',
+            {
+              query: String(args.query),
+              model: 'sonar-reasoning-pro',
+              timeout: 90000,
+            },
+            startTime
+          ),
+        };
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.error('[perplexity_reason] Error:', errMsg);
-        return { error: `Reasoning failed: ${errMsg}` };
+        return {
+          error: `Reasoning failed: ${errMsg}`,
+          _debug: createErrorDebug(
+            'perplexity_reason',
+            error instanceof Error ? error : errMsg,
+            {
+              query: String(args.query),
+              model: 'sonar-reasoning-pro',
+              timeout: 90000,
+            },
+            startTime
+          ),
+        };
       }
     },
   };

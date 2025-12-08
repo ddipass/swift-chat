@@ -13,6 +13,7 @@ import {
   saveTextModel,
 } from '../storage/StorageUtils';
 import { getPerplexityTools } from './PerplexityTools';
+import { createSuccessDebug } from './ToolDebugUtils';
 
 export interface BuiltInTool {
   name: string;
@@ -243,6 +244,7 @@ const webFetchTool: BuiltInTool = {
     required: ['url'],
   },
   execute: async (args: Record<string, unknown>) => {
+    const startTime = Date.now();
     const url = args.url as string;
 
     if (!url || typeof url !== 'string') {
@@ -325,6 +327,19 @@ const webFetchTool: BuiltInTool = {
           originalLength: cleanText.length,
           processedBy,
           processingInfo,
+          _debug: createSuccessDebug(
+            'web_fetch',
+            {
+              url,
+              mode: getContentProcessingMode(),
+              summaryModel: getSummaryModel()?.modelName || 'not configured',
+              processedBy,
+              fallbackReason: processingInfo.fallbackReason || 'none',
+              htmlLength: processingInfo.htmlLength,
+              truncated,
+            },
+            startTime
+          ),
         };
       }
 
