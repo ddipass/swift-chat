@@ -8,6 +8,9 @@ import {
   getContentProcessingMode,
   getAISummaryPrompt,
   getRemoveElements,
+  getSummaryModel,
+  getTextModel,
+  saveTextModel,
 } from '../storage/StorageUtils';
 
 export interface BuiltInTool {
@@ -51,52 +54,158 @@ function cleanHTMLWithRegex(html: string): string {
 /**
  * Summarize HTML using AI
  */
-async function summarizeHTMLWithAI(html: string, url: string): Promise<string> {
+async function summarizeHTMLWithAI(
+  html: string,
+  url: string
+): Promise<{ content: string; processedBy: string }> {
   try {
     const prompt = getAISummaryPrompt();
+    const summaryModel = getSummaryModel();
+    const originalModel = getTextModel();
+
+    console.log('[web_fetch] AI Summary mode activated');
+    console.log('[web_fetch] Prompt:', prompt.substring(0, 100) + '...');
+    console.log(
+      '[web_fetch] Summary Model:',
+      summaryModel?.modelName || 'NOT SET',
+      summaryModel?.modelId || ''
+    );
+    console.log(
+      '[web_fetch] Original Model:',
+      originalModel?.modelName || 'NOT SET',
+      originalModel?.modelId || ''
+    );
+
+    // Check if summary model is configured
+    if (!summaryModel || !summaryModel.modelId) {
+      console.warn(
+        '[web_fetch] Summary model not configured, falling back to regex'
+      );
+      return { content: cleanHTMLWithRegex(html), processedBy: 'regex' };
+    }
 
     // Import bedrock-api dynamically to avoid circular dependency
     const { invokeBedrockWithCallBack } = await import('../api/bedrock-api');
     const { ChatMode } = await import('../types/Chat');
 
+    // Check if we need to switch models
+    const needModelSwitch = summaryModel.modelId !== originalModel.modelId;
+
+    if (needModelSwitch) {
+      console.log(
+        '[web_fetch] Switching to summary model:',
+        summaryModel.modelName
+      );
+      saveTextModel(summaryModel);
+    } else {
+      console.log('[web_fetch] Using current model (same as summary model)');
+    }
+
     // Limit HTML size to avoid token overflow
     const maxHtmlLength = 50000;
     const truncatedHtml = html.substring(0, maxHtmlLength);
+    console.log(
+      '[web_fetch] HTML length:',
+      html.length,
+      'truncated to:',
+      truncatedHtml.length
+    );
 
     let summary = '';
+    let isComplete = false;
+    let hasError = false;
 
-    // Wait for streaming to complete before returning
-    // Unlike ChatScreen which updates UI progressively, tool calls must return complete results
-    await new Promise<void>(resolve => {
-      invokeBedrockWithCallBack(
-        [
-          {
-            role: 'user',
-            content: [
-              {
-                text: `${prompt}\n\nURL: ${url}\n\nHTML:\n${truncatedHtml}`,
-              },
-            ],
-          },
-        ],
-        ChatMode.Text,
-        { id: 0, name: 'Web Fetch', prompt: '', includeHistory: false },
-        () => false,
-        new AbortController(),
-        (result: string, complete: boolean) => {
-          summary = result;
-          if (complete) {
-            resolve();
+    try {
+      // Wait for streaming to complete before returning
+      await new Promise<void>((resolve, reject) => {
+        // Set a timeout
+        const timeoutId = setTimeout(() => {
+          if (!isComplete) {
+            console.warn(
+              '[web_fetch] AI summarization timeout - callback never completed'
+            );
+            reject(new Error('AI summarization timeout after 90 seconds'));
           }
-        }
-      );
-    });
+        }, 90000); // 90 seconds timeout
 
-    return summary;
+        console.log('[web_fetch] Calling invokeBedrockWithCallBack...');
+
+        invokeBedrockWithCallBack(
+          [
+            {
+              role: 'user',
+              content: [
+                {
+                  text: `${prompt}\n\nURL: ${url}\n\nHTML:\n${truncatedHtml}`,
+                },
+              ],
+            },
+          ],
+          ChatMode.Text,
+          { id: 0, name: 'Web Fetch', prompt: '', includeHistory: false },
+          () => false,
+          new AbortController(),
+          (result: string, complete: boolean, needStop: boolean) => {
+            console.log(
+              '[web_fetch] Callback invoked - complete:',
+              complete,
+              'length:',
+              result.length
+            );
+
+            if (needStop || hasError) {
+              clearTimeout(timeoutId);
+              hasError = true;
+              reject(new Error('AI summarization was stopped'));
+              return;
+            }
+
+            // Update summary with each chunk
+            summary = result;
+
+            if (complete) {
+              clearTimeout(timeoutId);
+              isComplete = true;
+              console.log(
+                '[web_fetch] AI summarization completed, final length:',
+                summary.length
+              );
+              resolve();
+            }
+          }
+        );
+
+        // invokeBedrockWithCallBack doesn't return a promise, so we need to wait
+        // If the callback is never called, the timeout will trigger
+      });
+    } finally {
+      // Restore original model only if we switched
+      if (needModelSwitch) {
+        console.log(
+          '[web_fetch] Restoring original model:',
+          originalModel.modelName
+        );
+        saveTextModel(originalModel);
+      }
+    }
+
+    // Check if summary is empty
+    if (!summary || summary.trim().length === 0) {
+      console.warn(
+        '[web_fetch] AI returned empty summary, falling back to regex'
+      );
+      throw new Error('AI returned empty summary');
+    }
+
+    console.log('[web_fetch] AI summarization successful');
+    return { content: summary, processedBy: 'ai_summary' };
   } catch (error) {
-    console.warn('AI summarization failed:', error);
+    console.warn(
+      '[web_fetch] AI summarization failed, falling back to regex:',
+      error
+    );
     // Fallback to regex cleaning
-    return cleanHTMLWithRegex(html);
+    return { content: cleanHTMLWithRegex(html), processedBy: 'regex' };
   }
 }
 
@@ -170,8 +279,9 @@ const webFetchTool: BuiltInTool = {
         let processedBy: string;
 
         if (mode === 'ai_summary') {
-          cleanText = await summarizeHTMLWithAI(responseText, url);
-          processedBy = 'ai_summary';
+          const result = await summarizeHTMLWithAI(responseText, url);
+          cleanText = result.content;
+          processedBy = result.processedBy;
         } else {
           cleanText = cleanHTMLWithRegex(responseText);
           processedBy = 'regex';

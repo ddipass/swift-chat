@@ -157,6 +157,17 @@ const WebFetchSettingsScreen = () => {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.infoCard}>
+          <Text style={styles.infoCardTitle}>
+            Current Mode: {mode === 'regex' ? 'Regex' : 'AI Summary'}
+          </Text>
+          <Text style={styles.infoCardText}>
+            {mode === 'regex'
+              ? 'Fast HTML tag removal using regex patterns. Free and instant.'
+              : 'Intelligent content extraction using AI. Uses tokens but provides better results.'}
+          </Text>
+        </View>
+
         {mode === 'ai_summary' && (
           <>
             <DropdownComponent
@@ -174,6 +185,10 @@ const WebFetchSettingsScreen = () => {
               }}
               placeholder="Select a model"
             />
+            <Text style={styles.hint}>
+              ⚠️ Important: You must select a Summary Model for AI mode to work.
+              If not selected, it will fall back to Regex mode.
+            </Text>
 
             <Text style={styles.label}>Prompt Template</Text>
             <View style={styles.templateButtons}>
@@ -330,6 +345,25 @@ const createStyles = (colors: ColorScheme) =>
       marginBottom: 16,
       borderWidth: 1,
       borderColor: colors.inputBorder,
+    },
+    infoCard: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 6,
+      padding: 12,
+      marginBottom: 16,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
+    },
+    infoCardTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    infoCardText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      lineHeight: 18,
     },
   });
 
