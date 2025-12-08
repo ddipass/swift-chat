@@ -25,15 +25,20 @@ export async function startOAuthFlow(server: MCPServer): Promise<void> {
   }
 
   try {
+    console.log('[OAuth] Starting flow for:', server.name);
+
     // Get OAuth configuration
     const config = await getOAuthConfig(server.url);
+    console.log('[OAuth] Config received');
 
     if (!config.authorization_endpoint || !config.token_endpoint) {
       throw new Error('Invalid OAuth configuration');
     }
 
     // Register client dynamically
+    console.log('[OAuth] Registering client...');
     const clientId = await registerClient(config, server.name);
+    console.log('[OAuth] Client ID:', clientId);
 
     // Generate PKCE
     const codeVerifier = generateCodeVerifier();
@@ -58,10 +63,24 @@ export async function startOAuthFlow(server: MCPServer): Promise<void> {
       state,
     );
 
+    console.log('[OAuth] Auth URL:', authUrl);
+
+    // Check if URL can be opened
+    const canOpen = await Linking.canOpenURL(authUrl);
+    console.log('[OAuth] Can open URL:', canOpen);
+
+    if (!canOpen) {
+      throw new Error('Cannot open authorization URL');
+    }
+
     // Open browser
     await Linking.openURL(authUrl);
+    console.log('[OAuth] URL opened');
   } catch (error) {
-    console.error('OAuth flow error:', error);
+    console.error('[OAuth] Error:', error);
+    if (error instanceof Error) {
+      throw new Error(`Authorization failed: ${error.message}`);
+    }
     throw error;
   }
 }
