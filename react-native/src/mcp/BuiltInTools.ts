@@ -141,13 +141,13 @@ async function summarizeHTMLWithAI(
               role: 'user',
               content: [
                 {
-                  text: `${prompt}\n\nURL: ${url}\n\nHTML:\n${truncatedHtml}`,
+                  text: `URL: ${url}\n\nHTML:\n${truncatedHtml}`,
                 },
               ],
             },
           ],
           ChatMode.Text,
-          { id: 0, name: 'Web Fetch', prompt: '', includeHistory: false },
+          { id: 0, name: 'Web Fetch', prompt: prompt, includeHistory: false },
           () => false,
           new AbortController(),
           (result: string, complete: boolean, needStop: boolean) => {
