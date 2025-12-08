@@ -65,26 +65,32 @@ async function summarizeHTMLWithAI(html: string, url: string): Promise<string> {
 
     let summary = '';
 
-    // Create a temporary session for summarization
-    await invokeBedrockWithCallBack(
-      [
-        {
-          role: 'user',
-          content: [
-            {
-              text: `${prompt}\n\nURL: ${url}\n\nHTML:\n${truncatedHtml}`,
-            },
-          ],
-        },
-      ],
-      ChatMode.Text,
-      { id: 0, name: 'Web Fetch', prompt: '', includeHistory: false },
-      () => false,
-      new AbortController(),
-      (result: string) => {
-        summary += result;
-      }
-    );
+    // Wait for streaming to complete before returning
+    // Unlike ChatScreen which updates UI progressively, tool calls must return complete results
+    await new Promise<void>(resolve => {
+      invokeBedrockWithCallBack(
+        [
+          {
+            role: 'user',
+            content: [
+              {
+                text: `${prompt}\n\nURL: ${url}\n\nHTML:\n${truncatedHtml}`,
+              },
+            ],
+          },
+        ],
+        ChatMode.Text,
+        { id: 0, name: 'Web Fetch', prompt: '', includeHistory: false },
+        () => false,
+        new AbortController(),
+        (result: string, complete: boolean) => {
+          summary = result;
+          if (complete) {
+            resolve();
+          }
+        }
+      );
+    });
 
     return summary;
   } catch (error) {

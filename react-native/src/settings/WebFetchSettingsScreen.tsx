@@ -92,13 +92,6 @@ const WebFetchSettingsScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Web Fetch Settings</Text>
-          <Text style={styles.description}>
-            Configure how web content is fetched and processed
-          </Text>
-        </View>
-
         <CustomTextInput
           label="Timeout (seconds)"
           value={timeout}
@@ -129,48 +122,45 @@ const WebFetchSettingsScreen = () => {
         />
         <Text style={styles.hint}>Range: 1000-50000 characters</Text>
 
-        <View style={styles.divider} />
+        <Text style={styles.middleLabel}>Content Processing Mode</Text>
 
-        <Text style={styles.sectionSubtitle}>Content Processing Mode</Text>
-
-        <TouchableOpacity
-          style={styles.radioOption}
-          onPress={() => handleModeChange('regex')}>
-          <View style={styles.radio}>
-            {mode === 'regex' && <View style={styles.radioSelected} />}
-          </View>
-          <View style={styles.radioContent}>
-            <Text style={styles.radioLabel}>Regex - Fast, basic cleaning</Text>
-            <Text style={styles.radioDescription}>
-              Remove HTML tags using regex patterns. Fast and free.
+        <View style={styles.modeSwitch}>
+          <TouchableOpacity
+            style={[
+              styles.modeSwitchButton,
+              mode === 'regex' && styles.modeSwitchButtonActive,
+            ]}
+            activeOpacity={0.7}
+            onPress={() => handleModeChange('regex')}>
+            <Text
+              style={[
+                styles.modeSwitchText,
+                mode === 'regex' && styles.modeSwitchTextActive,
+              ]}>
+              Regex
             </Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.radioOption}
-          onPress={() => handleModeChange('ai_summary')}>
-          <View style={styles.radio}>
-            {mode === 'ai_summary' && <View style={styles.radioSelected} />}
-          </View>
-          <View style={styles.radioContent}>
-            <Text style={styles.radioLabel}>
-              AI Summary - Smart content extraction
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.modeSwitchButton,
+              mode === 'ai_summary' && styles.modeSwitchButtonActive,
+            ]}
+            activeOpacity={0.7}
+            onPress={() => handleModeChange('ai_summary')}>
+            <Text
+              style={[
+                styles.modeSwitchText,
+                mode === 'ai_summary' && styles.modeSwitchTextActive,
+              ]}>
+              AI Summary
             </Text>
-            <Text style={styles.radioDescription}>
-              Use AI to intelligently extract and summarize content. Uses
-              tokens.
-            </Text>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
         {mode === 'ai_summary' && (
           <>
-            <View style={styles.divider} />
-            <Text style={styles.sectionSubtitle}>AI Summary Settings</Text>
-
             <DropdownComponent
-              label="Summary Model (for web fetch only)"
+              label="Summary Model"
               data={modelDropdownItems}
               value={summaryModel.modelId}
               onChange={(item: DropdownItem) => {
@@ -184,11 +174,8 @@ const WebFetchSettingsScreen = () => {
               }}
               placeholder="Select a model"
             />
-            <Text style={styles.hint}>
-              Separate from your chat model. Won't affect conversation context.
-            </Text>
 
-            <Text style={styles.label}>Summary Prompt Template</Text>
+            <Text style={styles.label}>Prompt Template</Text>
             <View style={styles.templateButtons}>
               {PROMPT_TEMPLATES.map(template => (
                 <TouchableOpacity
@@ -214,7 +201,7 @@ const WebFetchSettingsScreen = () => {
               ))}
             </View>
 
-            <Text style={styles.label}>Custom Prompt (Editable)</Text>
+            <Text style={styles.label}>Custom Prompt</Text>
             <TextInput
               style={styles.promptInput}
               value={summaryPrompt}
@@ -222,22 +209,16 @@ const WebFetchSettingsScreen = () => {
                 setSummaryPrompt(text);
                 setAISummaryPrompt(text);
               }}
-              placeholder="Enter custom summary prompt or select a template above"
+              placeholder="Enter custom summary prompt"
               multiline
               numberOfLines={6}
               placeholderTextColor={colors.textSecondary}
             />
-            <Text style={styles.hint}>
-              💡 Tip: Select a template above or write your own custom prompt
-            </Text>
           </>
         )}
 
         {mode === 'regex' && (
           <>
-            <View style={styles.divider} />
-            <Text style={styles.sectionSubtitle}>Regex Settings</Text>
-
             <CustomTextInput
               label="Remove Elements (comma separated)"
               value={removeElements}
@@ -267,26 +248,6 @@ const createStyles = (colors: ColorScheme) =>
       flex: 1,
       padding: 20,
     },
-    section: {
-      marginBottom: 24,
-    },
-    sectionTitle: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginBottom: 8,
-    },
-    sectionSubtitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.text,
-      marginBottom: 16,
-    },
-    description: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      lineHeight: 20,
-    },
     hint: {
       fontSize: 12,
       color: colors.textSecondary,
@@ -294,49 +255,37 @@ const createStyles = (colors: ColorScheme) =>
       marginBottom: 16,
       marginLeft: 4,
     },
-    divider: {
-      height: 1,
-      backgroundColor: colors.border,
-      marginVertical: 24,
-    },
-    radioOption: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      marginBottom: 16,
-      padding: 12,
-      backgroundColor: colors.inputBackground,
-      borderRadius: 8,
-    },
-    radio: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      borderWidth: 2,
-      borderColor: colors.primary,
-      marginRight: 12,
-      marginTop: 2,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    radioSelected: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      backgroundColor: colors.primary,
-    },
-    radioContent: {
-      flex: 1,
-    },
-    radioLabel: {
+    middleLabel: {
       fontSize: 16,
       fontWeight: '500',
       color: colors.text,
-      marginBottom: 4,
+      marginTop: 10,
+      marginBottom: 12,
     },
-    radioDescription: {
+    modeSwitch: {
+      flexDirection: 'row',
+      backgroundColor: colors.inputBackground,
+      borderRadius: 6,
+      padding: 4,
+      marginBottom: 16,
+    },
+    modeSwitchButton: {
+      flex: 1,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 4,
+      alignItems: 'center',
+    },
+    modeSwitchButtonActive: {
+      backgroundColor: colors.primary,
+    },
+    modeSwitchText: {
       fontSize: 14,
       color: colors.textSecondary,
-      lineHeight: 18,
+      fontWeight: '500',
+    },
+    modeSwitchTextActive: {
+      color: '#ffffff',
     },
     label: {
       fontSize: 16,
@@ -353,7 +302,7 @@ const createStyles = (colors: ColorScheme) =>
     templateButton: {
       paddingHorizontal: 12,
       paddingVertical: 8,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.inputBackground,
       borderRadius: 6,
       borderWidth: 1,
       borderColor: colors.border,
@@ -370,47 +319,17 @@ const createStyles = (colors: ColorScheme) =>
     templateButtonTextActive: {
       color: '#ffffff',
     },
-    modelSelector: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      backgroundColor: colors.inputBackground,
-      padding: 16,
-      borderRadius: 8,
-      marginBottom: 8,
-    },
-    modelText: {
-      fontSize: 16,
-      color: colors.text,
-    },
-    modelArrow: {
-      fontSize: 12,
-      color: colors.textSecondary,
-    },
-    modelPicker: {
-      backgroundColor: colors.inputBackground,
-      borderRadius: 8,
-      marginBottom: 16,
-      maxHeight: 200,
-    },
-    modelOption: {
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    modelOptionText: {
-      fontSize: 16,
-      color: colors.text,
-    },
     promptInput: {
       backgroundColor: colors.inputBackground,
       color: colors.text,
       padding: 12,
-      borderRadius: 8,
+      borderRadius: 6,
       fontSize: 14,
       minHeight: 120,
       textAlignVertical: 'top',
       marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
     },
   });
 

@@ -25,16 +25,6 @@ import {
 } from '../storage/StorageUtils';
 import CustomTextInput from './CustomTextInput';
 
-// Spacing system
-const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-};
-
 const MCPSettingsScreen = () => {
   const { colors } = useTheme();
   const [mcpEnabled, setMcpEnabled] = useState(getMCPEnabled());
@@ -50,6 +40,7 @@ const MCPSettingsScreen = () => {
   const handleAddServer = () => {
     if (!newServerName || !newServerUrl) {
       if (Platform.OS === 'web') {
+        // @ts-expect-error - alert is available in web
         alert('Please enter server name and URL');
       } else {
         Alert.alert('Error', 'Please enter server name and URL');
@@ -60,6 +51,7 @@ const MCPSettingsScreen = () => {
     // Check name length
     if (newServerName.length < 2 || newServerName.length > 50) {
       if (Platform.OS === 'web') {
+        // @ts-expect-error - alert is available in web
         alert('Server name must be 2-50 characters');
       } else {
         Alert.alert('Error', 'Server name must be 2-50 characters');
@@ -70,6 +62,7 @@ const MCPSettingsScreen = () => {
     // Check for duplicate name
     if (servers.some(s => s.name === newServerName)) {
       if (Platform.OS === 'web') {
+        // @ts-expect-error - alert is available in web
         alert('Server name already exists');
       } else {
         Alert.alert('Error', 'Server name already exists');
@@ -82,6 +75,7 @@ const MCPSettingsScreen = () => {
       const parsedUrl = new URL(newServerUrl);
       if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
         if (Platform.OS === 'web') {
+          // @ts-expect-error - alert is available in web
           alert('Invalid URL: Only HTTP/HTTPS protocols are supported');
         } else {
           Alert.alert(
@@ -93,6 +87,7 @@ const MCPSettingsScreen = () => {
       }
     } catch (e) {
       if (Platform.OS === 'web') {
+        // @ts-expect-error - alert is available in web
         alert('Invalid URL format');
       } else {
         Alert.alert('Error', 'Invalid URL format');
@@ -103,6 +98,7 @@ const MCPSettingsScreen = () => {
     // Check for duplicate URL
     if (servers.some(s => s.url === newServerUrl)) {
       if (Platform.OS === 'web') {
+        // @ts-expect-error - alert is available in web
         alert('Server URL already exists');
       } else {
         Alert.alert('Error', 'Server URL already exists');
@@ -133,28 +129,24 @@ const MCPSettingsScreen = () => {
 
   const handleRemoveServer = (serverId: string, serverName: string) => {
     if (Platform.OS === 'web') {
+      // @ts-expect-error - window.confirm is available in web
       const confirmed = window.confirm(`Remove server "${serverName}"?`);
       if (confirmed) {
         removeMCPServer(serverId);
         setServers(servers.filter(s => s.id !== serverId));
       }
     } else {
-      Alert.Alert.alert(
-        'Error',
-        'Remove Server',
-        `Remove server "${serverName}"?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: () => {
-              removeMCPServer(serverId);
-              setServers(servers.filter(s => s.id !== serverId));
-            },
+      Alert.alert('Remove Server', `Remove server "${serverName}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            removeMCPServer(serverId);
+            setServers(servers.filter(s => s.id !== serverId));
           },
-        ]
-      );
+        },
+      ]);
     }
   };
 
@@ -166,14 +158,6 @@ const MCPSettingsScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
         <ScrollView style={styles.container}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MCP Integration</Text>
-            <Text style={styles.description}>
-              Model Context Protocol allows AI to use external tools and
-              services
-            </Text>
-          </View>
-
           <View style={styles.settingRow}>
             <Text style={styles.label}>Enable MCP</Text>
             <Switch
@@ -201,29 +185,22 @@ const MCPSettingsScreen = () => {
                 keyboardType="numeric"
               />
 
-              <View style={styles.divider} />
-
-              <Text style={styles.sectionSubtitle}>MCP Servers</Text>
+              <Text style={styles.middleLabel}>MCP Servers</Text>
 
               {servers.length === 0 && !showAddServer && (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyTitle}>No MCP Servers</Text>
-                  <Text style={styles.emptyDescription}>
-                    Add an MCP server to enable external tools and services
+                  <Text style={styles.emptyText}>
+                    No MCP servers configured
                   </Text>
                 </View>
               )}
 
               {servers.map(server => (
-                <View key={server.id} style={styles.serverCard}>
-                  <View style={styles.serverHeader}>
-                    <View style={styles.serverNameContainer}>
+                <View key={server.id} style={styles.serverItem}>
+                  <View style={styles.serverRow}>
+                    <View style={styles.serverInfo}>
                       <Text style={styles.serverName}>{server.name}</Text>
-                      {server.enabled && (
-                        <View style={styles.statusBadge}>
-                          <Text style={styles.statusText}>● Active</Text>
-                        </View>
-                      )}
+                      <Text style={styles.serverUrl}>{server.url}</Text>
                     </View>
                     <Switch
                       value={server.enabled}
@@ -232,22 +209,12 @@ const MCPSettingsScreen = () => {
                       }
                     />
                   </View>
-                  <Text style={styles.serverUrl}>{server.url}</Text>
-                  {server.apiKey && (
-                    <Text style={styles.serverApiKey}>
-                      API Key: {server.apiKey.substring(0, 8)}••••
-                    </Text>
-                  )}
-                  <View style={styles.serverActions}>
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      activeOpacity={0.7}
-                      onPress={() =>
-                        handleRemoveServer(server.id, server.name)
-                      }>
-                      <Text style={styles.removeButtonText}>Remove</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    activeOpacity={0.7}
+                    onPress={() => handleRemoveServer(server.id, server.name)}>
+                    <Text style={styles.removeButtonText}>Remove</Text>
+                  </TouchableOpacity>
                 </View>
               ))}
 
@@ -303,23 +270,6 @@ const MCPSettingsScreen = () => {
                   </View>
                 </View>
               )}
-
-              <View style={styles.divider} />
-
-              <View style={styles.infoSection}>
-                <Text style={styles.infoTitle}>Built-in Tools:</Text>
-                <Text style={styles.infoText}>
-                  • web_fetch - Fetch web content
-                </Text>
-                <Text style={styles.infoTitleWithMargin}>External Tools:</Text>
-                <Text style={styles.infoText}>
-                  {servers.filter(s => s.enabled).length > 0
-                    ? `Connected to ${
-                        servers.filter(s => s.enabled).length
-                      } server(s)`
-                    : 'No servers connected'}
-                </Text>
-              </View>
             </>
           )}
         </ScrollView>
@@ -339,188 +289,112 @@ const createStyles = (colors: ColorScheme) =>
     },
     container: {
       flex: 1,
-      padding: spacing.lg,
-    },
-    section: {
-      marginBottom: spacing.xl,
-    },
-    sectionTitle: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginBottom: spacing.sm,
-    },
-    sectionSubtitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.text,
-      marginBottom: spacing.lg,
-    },
-    description: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      lineHeight: 20,
+      padding: 20,
     },
     settingRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: spacing.md,
-      marginBottom: spacing.lg,
+      marginVertical: 10,
     },
     label: {
       fontSize: 16,
+      fontWeight: '500',
       color: colors.text,
     },
-    divider: {
-      height: 1,
-      backgroundColor: colors.border,
-      marginVertical: spacing.xl,
+    middleLabel: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+      marginTop: 10,
+      marginBottom: 12,
     },
-    serverCard: {
+    emptyState: {
+      padding: 20,
+      alignItems: 'center',
       backgroundColor: colors.inputBackground,
-      borderRadius: spacing.sm,
-      padding: spacing.lg,
-      marginBottom: spacing.md,
+      borderRadius: 6,
+      marginBottom: 16,
     },
-    serverHeader: {
+    emptyText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    serverItem: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 6,
+      padding: 12,
+      marginBottom: 12,
+    },
+    serverRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: spacing.sm,
+      marginBottom: 8,
     },
-    serverNameContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    serverInfo: {
       flex: 1,
-      marginRight: spacing.md,
+      marginRight: 12,
     },
     serverName: {
       fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    statusBadge: {
-      marginLeft: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 2,
-      backgroundColor: colors.success + '20',
-      borderRadius: 4,
-    },
-    statusText: {
-      fontSize: 11,
-      color: colors.success,
       fontWeight: '500',
+      color: colors.text,
+      marginBottom: 4,
     },
     serverUrl: {
-      fontSize: 14,
+      fontSize: 13,
       color: colors.textSecondary,
-      marginBottom: spacing.xs,
-    },
-    serverApiKey: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      marginBottom: spacing.sm,
-    },
-    serverActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
     },
     removeButton: {
-      paddingVertical: 6,
-      paddingHorizontal: spacing.md,
+      paddingVertical: 4,
     },
     removeButtonText: {
       color: colors.error || '#FF3B30',
       fontSize: 14,
-      fontWeight: '500',
     },
     addButton: {
       backgroundColor: colors.primary,
-      padding: spacing.lg,
-      borderRadius: spacing.sm,
+      padding: 14,
+      borderRadius: 6,
       alignItems: 'center',
-      marginTop: spacing.sm,
+      marginTop: 4,
     },
     addButtonText: {
       color: '#ffffff',
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: '500',
     },
     addServerForm: {
       backgroundColor: colors.inputBackground,
-      borderRadius: spacing.sm,
-      padding: spacing.lg,
-      marginTop: spacing.sm,
+      borderRadius: 6,
+      padding: 16,
+      marginTop: 4,
     },
     formActions: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
-      marginTop: spacing.lg,
-      gap: spacing.md,
+      marginTop: 12,
+      gap: 12,
     },
     cancelButton: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.lg,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
     },
     cancelButtonText: {
       color: colors.textSecondary,
       fontSize: 16,
-      fontWeight: '500',
     },
     saveButton: {
       backgroundColor: colors.primary,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.lg,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
       borderRadius: 6,
     },
     saveButtonText: {
       color: '#ffffff',
       fontSize: 16,
-      fontWeight: '600',
-    },
-    infoSection: {
-      marginTop: spacing.xl,
-      padding: spacing.lg,
-      backgroundColor: colors.inputBackground,
-      borderRadius: spacing.sm,
-    },
-    infoTitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text,
-      marginBottom: spacing.sm,
-    },
-    infoTitleWithMargin: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text,
-      marginTop: spacing.lg,
-      marginBottom: spacing.sm,
-    },
-    infoText: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      lineHeight: 20,
-    },
-    emptyState: {
-      padding: spacing.xxl,
-      alignItems: 'center',
-      backgroundColor: colors.surface,
-      borderRadius: spacing.sm,
-      marginBottom: spacing.lg,
-    },
-    emptyTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
-      marginBottom: spacing.sm,
-    },
-    emptyDescription: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      lineHeight: 20,
+      fontWeight: '500',
     },
   });
 
