@@ -60,7 +60,7 @@ export async function startOAuthFlow(server: MCPServer): Promise<void> {
       config.authorization_endpoint,
       clientId,
       codeChallenge,
-      state,
+      state
     );
 
     console.log('[OAuth] Auth URL:', authUrl);
@@ -113,7 +113,7 @@ export async function handleOAuthCallback(url: string): Promise<string | null> {
       oauthState.tokenEndpoint,
       code,
       oauthState.clientId,
-      oauthState.codeVerifier,
+      oauthState.codeVerifier
     );
 
     if (!tokenData.access_token) {
@@ -157,7 +157,7 @@ async function getOAuthConfig(serverUrl: string): Promise<OAuthConfig> {
 
 async function registerClient(
   config: OAuthConfig,
-  appName: string,
+  appName: string
 ): Promise<string> {
   if (!config.registration_endpoint) {
     throw new Error('Dynamic client registration not supported by this server');
@@ -179,7 +179,7 @@ async function registerClient(
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `Client registration failed: ${response.status} ${errorText}`,
+        `Client registration failed: ${response.status} ${errorText}`
       );
     }
 
@@ -191,7 +191,9 @@ async function registerClient(
 
     if (!data.client_id) {
       throw new Error(
-        `No client_id in registration response. Received: ${JSON.stringify(data)}`,
+        `No client_id in registration response. Received: ${JSON.stringify(
+          data
+        )}`
       );
     }
 
@@ -208,7 +210,7 @@ function buildAuthUrl(
   authEndpoint: string,
   clientId: string,
   codeChallenge: string,
-  state: string,
+  state: string
 ): string {
   const params = new URLSearchParams({
     client_id: clientId,
@@ -232,7 +234,7 @@ async function exchangeCodeForToken(
   tokenEndpoint: string,
   code: string,
   clientId: string,
-  codeVerifier: string,
+  codeVerifier: string
 ): Promise<TokenResponse> {
   const response = await fetch(tokenEndpoint, {
     method: 'POST',
@@ -303,12 +305,9 @@ function storeOAuthState(state: string, data: OAuthState) {
   oauthStates.set(state, data);
 
   // Auto-cleanup after 10 minutes
-  setTimeout(
-    () => {
-      oauthStates.delete(state);
-    },
-    10 * 60 * 1000,
-  );
+  setTimeout(() => {
+    oauthStates.delete(state);
+  }, 10 * 60 * 1000);
 }
 
 function getOAuthState(state: string): OAuthState | undefined {
