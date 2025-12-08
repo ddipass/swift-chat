@@ -55,7 +55,7 @@ function createSearchTool(customDescription?: string): BuiltInTool {
             'perplexity_search',
             'API key not configured',
             { query: String(args.query) },
-            startTime
+            startTime,
           ),
         };
       }
@@ -73,7 +73,7 @@ function createSearchTool(customDescription?: string): BuiltInTool {
               | 'year'
               | undefined,
           },
-          30000
+          30000,
         );
 
         return {
@@ -86,7 +86,7 @@ function createSearchTool(customDescription?: string): BuiltInTool {
               resultCount: results.length,
               timeout: 30000,
             },
-            startTime
+            startTime,
           ),
         };
       } catch (error) {
@@ -101,7 +101,7 @@ function createSearchTool(customDescription?: string): BuiltInTool {
               query: String(args.query),
               timeout: 30000,
             },
-            startTime
+            startTime,
           ),
         };
       }
@@ -136,7 +136,7 @@ function createAskTool(customDescription?: string): BuiltInTool {
             'perplexity_ask',
             'API key not configured',
             { query: String(args.query) },
-            startTime
+            startTime,
           ),
         };
       }
@@ -154,7 +154,7 @@ function createAskTool(customDescription?: string): BuiltInTool {
               model: 'sonar-pro',
               timeout: 60000,
             },
-            startTime
+            startTime,
           ),
         };
       } catch (error) {
@@ -170,7 +170,7 @@ function createAskTool(customDescription?: string): BuiltInTool {
               model: 'sonar-pro',
               timeout: 60000,
             },
-            startTime
+            startTime,
           ),
         };
       }
@@ -205,7 +205,7 @@ function createResearchTool(customDescription?: string): BuiltInTool {
             'perplexity_research',
             'API key not configured',
             { query: String(args.query) },
-            startTime
+            startTime,
           ),
         };
       }
@@ -214,7 +214,7 @@ function createResearchTool(customDescription?: string): BuiltInTool {
         const client = new PerplexitySearchClient(apiKey);
         const report = await client.research(
           { query: String(args.query) },
-          300000
+          300000,
         );
 
         return {
@@ -226,7 +226,7 @@ function createResearchTool(customDescription?: string): BuiltInTool {
               model: 'sonar-deep-research',
               timeout: 300000,
             },
-            startTime
+            startTime,
           ),
         };
       } catch (error) {
@@ -242,7 +242,7 @@ function createResearchTool(customDescription?: string): BuiltInTool {
               model: 'sonar-deep-research',
               timeout: 300000,
             },
-            startTime
+            startTime,
           ),
         };
       }
@@ -277,7 +277,7 @@ function createReasonTool(customDescription?: string): BuiltInTool {
             'perplexity_reason',
             'API key not configured',
             { query: String(args.query) },
-            startTime
+            startTime,
           ),
         };
       }
@@ -286,7 +286,7 @@ function createReasonTool(customDescription?: string): BuiltInTool {
         const client = new PerplexitySearchClient(apiKey);
         const reasoning = await client.reason(
           { query: String(args.query) },
-          90000
+          90000,
         );
 
         return {
@@ -298,7 +298,7 @@ function createReasonTool(customDescription?: string): BuiltInTool {
               model: 'sonar-reasoning-pro',
               timeout: 90000,
             },
-            startTime
+            startTime,
           ),
         };
       } catch (error) {
@@ -314,7 +314,7 @@ function createReasonTool(customDescription?: string): BuiltInTool {
               model: 'sonar-reasoning-pro',
               timeout: 90000,
             },
-            startTime
+            startTime,
           ),
         };
       }
