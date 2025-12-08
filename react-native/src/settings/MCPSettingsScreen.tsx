@@ -68,11 +68,38 @@ const MCPSettingsScreen = () => {
     try {
       await startOAuthFlow(server);
     } catch (error) {
+      // Extract detailed error message
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      console.error('[MCPSettings] OAuth error:', errorMessage);
+
       if (Platform.OS === 'web') {
         // @ts-expect-error - alert is available in web
-        alert(`Authorization failed: ${error}`);
+        alert(`Authorization Failed\n\n${errorMessage}`);
       } else {
-        Alert.alert('Error', `Authorization failed: ${error}`);
+        Alert.alert(
+          '❌ Authorization Failed',
+          errorMessage,
+          [
+            {
+              text: 'Copy Error',
+              onPress: () => {
+                // Copy to clipboard if available
+                if (Platform.OS !== 'web') {
+                  // @ts-expect-error - Clipboard might not be typed
+                  import('react-native').then(RN => {
+                    if (RN.Clipboard) {
+                      RN.Clipboard.setString(errorMessage);
+                    }
+                  });
+                }
+              },
+            },
+            { text: 'OK', style: 'cancel' },
+          ],
+          { cancelable: true }
+        );
       }
     }
   };

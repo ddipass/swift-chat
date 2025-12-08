@@ -85,18 +85,20 @@ export async function startOAuthFlow(server: MCPServer): Promise<void> {
         linkingError instanceof Error
           ? linkingError
           : new Error(String(linkingError));
-      const errorDetails = `
-Error: ${error.message}
-Type: ${error.name}
-Auth URL: ${authUrl}
 
-This error often occurs when:
-1. The URL scheme is not properly configured
-2. React Native's Linking module has internal issues (blobId error)
-3. The browser cannot be opened
-
-Stack: ${error.stack || 'No stack trace'}
-      `.trim();
+      // Create concise but informative error message
+      const errorDetails = [
+        `❌ ${error.message}`,
+        '',
+        `🔗 URL: ${authUrl.substring(0, 50)}...`,
+        '',
+        '💡 Common causes:',
+        '• React Native Linking bug (blobId error)',
+        '• URL scheme not configured',
+        '• Browser cannot open URL',
+        '',
+        `📋 Error type: ${error.name}`,
+      ].join('\n');
 
       throw new Error(errorDetails);
     }
