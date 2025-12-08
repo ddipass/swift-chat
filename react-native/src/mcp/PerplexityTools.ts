@@ -343,7 +343,9 @@ export function getPerplexityTools(): BuiltInTool[] {
   return enabledToolIds
     .map(id => {
       const factory = toolFactories[id];
-      if (!factory) return undefined;
+      if (!factory) {
+        return undefined;
+      }
       return factory(customDescriptions[id as keyof typeof customDescriptions]);
     })
     .filter((tool): tool is BuiltInTool => tool !== undefined);
