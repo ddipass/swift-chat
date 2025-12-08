@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Switch,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useTheme, ColorScheme } from '../theme';
 import {
@@ -15,6 +16,8 @@ import {
   setPerplexityEnabled,
   getPerplexityApiKey,
   savePerplexityApiKey,
+  getPerplexityBaseUrl,
+  savePerplexityBaseUrl,
   getPerplexityEnabledTools,
   savePerplexityEnabledTools,
   getPerplexityToolDescriptions,
@@ -23,6 +26,8 @@ import {
 } from '../storage/StorageUtils';
 import CustomTextInput from './CustomTextInput';
 import { getDefaultToolDescriptions } from '../mcp/PerplexityTools';
+import { PerplexitySearchClient } from '../search/PerplexitySearch';
+import { getBuiltInTools } from '../mcp/BuiltInTools';
 
 const AVAILABLE_TOOLS = [
   {
@@ -55,14 +60,29 @@ const PerplexitySettingsScreen = () => {
   const { colors } = useTheme();
   const [enabled, setEnabled] = useState(getPerplexityEnabled());
   const [apiKey, setApiKey] = useState(getPerplexityApiKey());
+  const [baseUrl, setBaseUrl] = useState(getPerplexityBaseUrl());
   const [enabledTools, setEnabledTools] = useState<string[]>(
     getPerplexityEnabledTools()
   );
   const [toolDescriptions, setToolDescriptions] =
     useState<PerplexityToolDescription>(getPerplexityToolDescriptions());
   const [editingTool, setEditingTool] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    duration?: number;
+  } | null>(null);
+  const [registeredTools, setRegisteredTools] = useState<string[]>([]);
 
   const defaultDescriptions = getDefaultToolDescriptions();
+
+  useEffect(() => {
+    const tools = getBuiltInTools()
+      .filter(t => t.name.startsWith('perplexity_'))
+      .map(t => t.name);
+    setRegisteredTools(tools);
+  }, [enabled, enabledTools]);
 
   const handleToggle = (value: boolean) => {
     setEnabled(value);
@@ -72,6 +92,43 @@ const PerplexitySettingsScreen = () => {
   const handleApiKeyChange = (value: string) => {
     setApiKey(value);
     savePerplexityApiKey(value);
+  };
+
+  const handleBaseUrlChange = (value: string) => {
+    setBaseUrl(value);
+    savePerplexityBaseUrl(value);
+  };
+
+  const testConnection = async () => {
+    if (!apiKey) {
+      setTestResult({
+        success: false,
+        message: 'API key is required',
+      });
+      return;
+    }
+
+    setTesting(true);
+    setTestResult(null);
+    const startTime = Date.now();
+
+    try {
+      const client = new PerplexitySearchClient(apiKey, baseUrl);
+      await client.search({ query: 'test' }, 5000);
+
+      setTestResult({
+        success: true,
+        message: 'Connected successfully',
+        duration: Date.now() - startTime,
+      });
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleToolToggle = (toolId: string) => {
@@ -118,6 +175,46 @@ const PerplexitySettingsScreen = () => {
               placeholder="pplx-your-api-key-here"
               secureTextEntry
             />
+
+            <CustomTextInput
+              label="Base URL"
+              value={baseUrl}
+              onChangeText={handleBaseUrlChange}
+              placeholder="https://api.perplexity.ai"
+              autoCapitalize="none"
+            />
+
+            <TouchableOpacity
+              style={[styles.testButton, testing && styles.testButtonDisabled]}
+              onPress={testConnection}
+              disabled={testing}>
+              {testing ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.testButtonText}>Test Connection</Text>
+              )}
+            </TouchableOpacity>
+
+            {testResult && (
+              <View
+                style={[
+                  styles.testResult,
+                  testResult.success
+                    ? styles.testResultSuccess
+                    : styles.testResultError,
+                ]}>
+                <Text
+                  style={[
+                    styles.testResultText,
+                    testResult.success
+                      ? styles.testResultTextSuccess
+                      : styles.testResultTextError,
+                  ]}>
+                  {testResult.success ? '✅' : '❌'} {testResult.message}
+                  {testResult.duration && ` (${testResult.duration}ms)`}
+                </Text>
+              </View>
+            )}
 
             <Text style={styles.sectionLabel}>Available Tools</Text>
 
@@ -217,6 +314,44 @@ const PerplexitySettingsScreen = () => {
                 2. Generate a new API key{'\n'}
                 3. Copy and paste it above
               </Text>
+            </View>
+
+            <View style={styles.debugSection}>
+              <Text style={styles.debugTitle}>🔧 Debug Information</Text>
+
+              <Text style={styles.debugLabel}>
+                Base URL: <Text style={styles.debugValue}>{baseUrl}</Text>
+              </Text>
+
+              <Text style={styles.debugLabel}>
+                Registered Tools ({registeredTools.length}):
+              </Text>
+              {registeredTools.length > 0 ? (
+                registeredTools.map(tool => (
+                  <Text key={tool} style={styles.debugItem}>
+                    • {tool}
+                  </Text>
+                ))
+              ) : (
+                <Text style={styles.debugItem}>
+                  No tools registered (Enable Perplexity and select tools)
+                </Text>
+              )}
+
+              {testResult && (
+                <>
+                  <Text style={styles.debugLabel}>Connection Test:</Text>
+                  <Text
+                    style={
+                      testResult.success
+                        ? styles.debugSuccess
+                        : styles.debugError
+                    }>
+                    {testResult.success ? '✅' : '❌'} {testResult.message}
+                    {testResult.duration && ` (${testResult.duration}ms)`}
+                  </Text>
+                </>
+              )}
             </View>
           </>
         )}
@@ -330,6 +465,89 @@ const createStyles = (colors: ColorScheme) =>
       fontSize: 13,
       color: colors.textSecondary,
       lineHeight: 20,
+    },
+    testButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 6,
+      padding: 12,
+      alignItems: 'center',
+      marginTop: 16,
+    },
+    testButtonDisabled: {
+      opacity: 0.6,
+    },
+    testButtonText: {
+      color: '#ffffff',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    testResult: {
+      borderRadius: 6,
+      padding: 12,
+      marginTop: 12,
+    },
+    testResultSuccess: {
+      backgroundColor: colors.inputBackground,
+      borderLeftWidth: 3,
+      borderLeftColor: '#4CAF50',
+    },
+    testResultError: {
+      backgroundColor: colors.inputBackground,
+      borderLeftWidth: 3,
+      borderLeftColor: '#F44336',
+    },
+    testResultText: {
+      fontSize: 13,
+    },
+    testResultTextSuccess: {
+      color: '#4CAF50',
+    },
+    testResultTextError: {
+      color: '#F44336',
+    },
+    debugSection: {
+      backgroundColor: colors.inputBackground,
+      borderRadius: 6,
+      padding: 16,
+      marginTop: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    debugTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    debugLabel: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.text,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    debugValue: {
+      fontWeight: '400',
+      color: colors.textSecondary,
+      fontFamily: 'monospace',
+    },
+    debugItem: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginLeft: 8,
+      marginVertical: 2,
+      fontFamily: 'monospace',
+    },
+    debugSuccess: {
+      fontSize: 12,
+      color: '#4CAF50',
+      marginLeft: 8,
+    },
+    debugError: {
+      fontSize: 12,
+      color: '#F44336',
+      marginLeft: 8,
     },
   });
 

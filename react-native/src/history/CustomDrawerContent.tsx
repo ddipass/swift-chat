@@ -308,6 +308,22 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
         style={styles.settingsTouch}
         onPress={() => {
           setDrawerToPermanent();
+          navigation.navigate('PerplexitySettings');
+        }}>
+        <Image
+          source={
+            isDark
+              ? require('../assets/bedrock.png')
+              : require('../assets/bedrock.png')
+          }
+          style={styles.settingsLeftImg}
+        />
+        <Text style={styles.settingsText}>🔍 Perplexity</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.settingsTouch}
+        onPress={() => {
+          setDrawerToPermanent();
           navigation.navigate('Settings');
         }}>
         <Image
