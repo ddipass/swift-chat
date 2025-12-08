@@ -16,14 +16,21 @@ console.log('1. Content Processing Mode:', mode || 'NOT SET (default: regex)');
 
 // Check AI Summary Prompt
 const prompt = storage.getString('aiSummaryPrompt');
-console.log('2. AI Summary Prompt:', prompt ? prompt.substring(0, 100) + '...' : 'NOT SET (using default)');
+console.log(
+  '2. AI Summary Prompt:',
+  prompt ? prompt.substring(0, 100) + '...' : 'NOT SET (using default)'
+);
 
 // Check Summary Model
 const summaryModelStr = storage.getString('summaryModel');
 if (summaryModelStr) {
   try {
     const summaryModel = JSON.parse(summaryModelStr);
-    console.log('3. Summary Model:', summaryModel.modelName, '(' + summaryModel.modelId + ')');
+    console.log(
+      '3. Summary Model:',
+      summaryModel.modelName,
+      '(' + summaryModel.modelId + ')'
+    );
   } catch (e) {
     console.log('3. Summary Model: PARSE ERROR');
   }
@@ -36,7 +43,11 @@ const textModelStr = storage.getString('textModel');
 if (textModelStr) {
   try {
     const textModel = JSON.parse(textModelStr);
-    console.log('4. Chat Model:', textModel.modelName, '(' + textModel.modelId + ')');
+    console.log(
+      '4. Chat Model:',
+      textModel.modelName,
+      '(' + textModel.modelId + ')'
+    );
   } catch (e) {
     console.log('4. Chat Model: PARSE ERROR');
   }
@@ -50,7 +61,10 @@ if (summaryModelStr && textModelStr) {
     const summaryModel = JSON.parse(summaryModelStr);
     const textModel = JSON.parse(textModelStr);
     const same = summaryModel.modelId === textModel.modelId;
-    console.log('5. Models are same?', same ? 'YES (no switch needed)' : 'NO (will switch)');
+    console.log(
+      '5. Models are same?',
+      same ? 'YES (no switch needed)' : 'NO (will switch)'
+    );
   } catch (e) {
     console.log('5. Models comparison: ERROR');
   }
@@ -60,7 +74,9 @@ console.log('\n=== Diagnosis ===\n');
 
 if (mode !== 'ai_summary') {
   console.log('❌ Problem: Mode is not set to "ai_summary"');
-  console.log('   Solution: Go to WebFetch Settings and select "AI Summary" mode');
+  console.log(
+    '   Solution: Go to WebFetch Settings and select "AI Summary" mode'
+  );
 } else {
   console.log('✅ Mode is correctly set to "ai_summary"');
 }
