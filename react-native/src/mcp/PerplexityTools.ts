@@ -2,6 +2,7 @@ import { BuiltInTool } from './BuiltInTools';
 import {
   getPerplexityEnabled,
   getPerplexityApiKey,
+  getPerplexityBaseUrl,
   getPerplexityEnabledTools,
   getPerplexityToolDescriptions,
 } from '../storage/StorageUtils';
@@ -48,6 +49,7 @@ function createSearchTool(customDescription?: string): BuiltInTool {
     execute: async (args: Record<string, unknown>) => {
       const startTime = Date.now();
       const apiKey = getPerplexityApiKey();
+      const baseUrl = getPerplexityBaseUrl();
       if (!apiKey) {
         return {
           error: 'Perplexity API key not configured',
@@ -61,7 +63,7 @@ function createSearchTool(customDescription?: string): BuiltInTool {
       }
 
       try {
-        const client = new PerplexitySearchClient(apiKey);
+        const client = new PerplexitySearchClient(apiKey, baseUrl);
         const results = await client.search(
           {
             query: String(args.query),
@@ -84,6 +86,7 @@ function createSearchTool(customDescription?: string): BuiltInTool {
             {
               query: String(args.query),
               resultCount: results.length,
+              apiUrl: `${baseUrl}/search`,
               timeout: 30000,
             },
             startTime
@@ -129,6 +132,7 @@ function createAskTool(customDescription?: string): BuiltInTool {
     execute: async (args: Record<string, unknown>) => {
       const startTime = Date.now();
       const apiKey = getPerplexityApiKey();
+      const baseUrl = getPerplexityBaseUrl();
       if (!apiKey) {
         return {
           error: 'Perplexity API key not configured',
@@ -142,7 +146,7 @@ function createAskTool(customDescription?: string): BuiltInTool {
       }
 
       try {
-        const client = new PerplexitySearchClient(apiKey);
+        const client = new PerplexitySearchClient(apiKey, baseUrl);
         const answer = await client.ask({ query: String(args.query) }, 60000);
 
         return {
@@ -151,6 +155,7 @@ function createAskTool(customDescription?: string): BuiltInTool {
             'perplexity_ask',
             {
               query: String(args.query),
+              apiUrl: `${baseUrl}/chat/completions`,
               model: 'sonar-pro',
               timeout: 60000,
             },
@@ -198,6 +203,7 @@ function createResearchTool(customDescription?: string): BuiltInTool {
     execute: async (args: Record<string, unknown>) => {
       const startTime = Date.now();
       const apiKey = getPerplexityApiKey();
+      const baseUrl = getPerplexityBaseUrl();
       if (!apiKey) {
         return {
           error: 'Perplexity API key not configured',
@@ -211,7 +217,7 @@ function createResearchTool(customDescription?: string): BuiltInTool {
       }
 
       try {
-        const client = new PerplexitySearchClient(apiKey);
+        const client = new PerplexitySearchClient(apiKey, baseUrl);
         const report = await client.research(
           { query: String(args.query) },
           300000
@@ -223,6 +229,7 @@ function createResearchTool(customDescription?: string): BuiltInTool {
             'perplexity_research',
             {
               query: String(args.query),
+              apiUrl: `${baseUrl}/chat/completions`,
               model: 'sonar-deep-research',
               timeout: 300000,
             },
@@ -270,6 +277,7 @@ function createReasonTool(customDescription?: string): BuiltInTool {
     execute: async (args: Record<string, unknown>) => {
       const startTime = Date.now();
       const apiKey = getPerplexityApiKey();
+      const baseUrl = getPerplexityBaseUrl();
       if (!apiKey) {
         return {
           error: 'Perplexity API key not configured',
@@ -283,7 +291,7 @@ function createReasonTool(customDescription?: string): BuiltInTool {
       }
 
       try {
-        const client = new PerplexitySearchClient(apiKey);
+        const client = new PerplexitySearchClient(apiKey, baseUrl);
         const reasoning = await client.reason(
           { query: String(args.query) },
           90000
@@ -295,6 +303,7 @@ function createReasonTool(customDescription?: string): BuiltInTool {
             'perplexity_reason',
             {
               query: String(args.query),
+              apiUrl: `${baseUrl}/chat/completions`,
               model: 'sonar-reasoning-pro',
               timeout: 90000,
             },
