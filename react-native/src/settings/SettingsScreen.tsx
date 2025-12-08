@@ -561,7 +561,9 @@ function SettingsScreen(): React.JSX.Element {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}>
         <View style={styles.providerSettingsWrapper}>
           <View style={styles.tabContainer}>
             <TabButton
@@ -818,6 +820,9 @@ const createStyles = (colors: ColorScheme) =>
     container: {
       flex: 1,
       padding: 20,
+    },
+    contentContainer: {
+      paddingBottom: 60,
     },
     label: {
       fontSize: 16,
