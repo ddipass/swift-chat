@@ -57,31 +57,34 @@ function cleanHTMLWithRegex(html: string): string {
 async function summarizeHTMLWithAI(
   html: string,
   url: string
-): Promise<{ content: string; processedBy: string }> {
+): Promise<{
+  content: string;
+  processedBy: string;
+  processingInfo: {
+    attemptedMode: string;
+    summaryModel?: string;
+    fallbackReason?: string;
+    htmlLength: number;
+  };
+}> {
+  const htmlLength = html.length;
+
   try {
     const prompt = getAISummaryPrompt();
     const summaryModel = getSummaryModel();
     const originalModel = getTextModel();
 
-    console.log('[web_fetch] AI Summary mode activated');
-    console.log('[web_fetch] Prompt:', prompt.substring(0, 100) + '...');
-    console.log(
-      '[web_fetch] Summary Model:',
-      summaryModel?.modelName || 'NOT SET',
-      summaryModel?.modelId || ''
-    );
-    console.log(
-      '[web_fetch] Original Model:',
-      originalModel?.modelName || 'NOT SET',
-      originalModel?.modelId || ''
-    );
-
     // Check if summary model is configured
     if (!summaryModel || !summaryModel.modelId) {
-      console.warn(
-        '[web_fetch] Summary model not configured, falling back to regex'
-      );
-      return { content: cleanHTMLWithRegex(html), processedBy: 'regex' };
+      return {
+        content: cleanHTMLWithRegex(html),
+        processedBy: 'regex',
+        processingInfo: {
+          attemptedMode: 'ai_summary',
+          fallbackReason: 'Summary model not configured',
+          htmlLength,
+        },
+      };
     }
 
     // Import bedrock-api dynamically to avoid circular dependency
@@ -197,15 +200,27 @@ async function summarizeHTMLWithAI(
       throw new Error('AI returned empty summary');
     }
 
-    console.log('[web_fetch] AI summarization successful');
-    return { content: summary, processedBy: 'ai_summary' };
+    return {
+      content: summary,
+      processedBy: 'ai_summary',
+      processingInfo: {
+        attemptedMode: 'ai_summary',
+        summaryModel: summaryModel.modelName,
+        htmlLength,
+      },
+    };
   } catch (error) {
-    console.warn(
-      '[web_fetch] AI summarization failed, falling back to regex:',
-      error
-    );
-    // Fallback to regex cleaning
-    return { content: cleanHTMLWithRegex(html), processedBy: 'regex' };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: cleanHTMLWithRegex(html),
+      processedBy: 'regex',
+      processingInfo: {
+        attemptedMode: 'ai_summary',
+        summaryModel: getSummaryModel()?.modelName,
+        fallbackReason: errorMessage,
+        htmlLength,
+      },
+    };
   }
 }
 
@@ -277,14 +292,25 @@ const webFetchTool: BuiltInTool = {
         const mode = getContentProcessingMode();
         let cleanText: string;
         let processedBy: string;
+        let processingInfo: {
+          attemptedMode: string;
+          summaryModel?: string;
+          fallbackReason?: string;
+          htmlLength: number;
+        };
 
         if (mode === 'ai_summary') {
           const result = await summarizeHTMLWithAI(responseText, url);
           cleanText = result.content;
           processedBy = result.processedBy;
+          processingInfo = result.processingInfo;
         } else {
           cleanText = cleanHTMLWithRegex(responseText);
           processedBy = 'regex';
+          processingInfo = {
+            attemptedMode: 'regex',
+            htmlLength: responseText.length,
+          };
         }
 
         const maxLength = getFetchMaxContentLength();
@@ -297,6 +323,7 @@ const webFetchTool: BuiltInTool = {
           truncated,
           originalLength: cleanText.length,
           processedBy,
+          processingInfo,
         };
       }
 

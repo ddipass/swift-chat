@@ -158,13 +158,22 @@ const WebFetchSettingsScreen = () => {
         </View>
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoCardTitle}>
-            Current Mode: {mode === 'regex' ? 'Regex' : 'AI Summary'}
-          </Text>
+          <Text style={styles.infoCardTitle}>Current Configuration</Text>
           <Text style={styles.infoCardText}>
+            • Mode: {mode === 'regex' ? 'Regex' : 'AI Summary'}
+          </Text>
+          {mode === 'ai_summary' && (
+            <Text style={styles.infoCardText}>
+              • Summary Model: {summaryModel?.modelName || 'Not selected'}
+            </Text>
+          )}
+          <Text style={styles.infoCardText}>
+            •{' '}
             {mode === 'regex'
-              ? 'Fast HTML tag removal using regex patterns. Free and instant.'
-              : 'Intelligent content extraction using AI. Uses tokens but provides better results.'}
+              ? 'Fast HTML tag removal. Free and instant.'
+              : summaryModel?.modelName
+              ? 'AI will extract and summarize content. Falls back to Regex if AI fails.'
+              : '⚠️ Please select a Summary Model above'}
           </Text>
         </View>
 
