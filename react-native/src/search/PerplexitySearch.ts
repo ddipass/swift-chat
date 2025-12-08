@@ -83,7 +83,9 @@ export class PerplexitySearchClient {
         );
       }
 
-      const data = await response.json();
+      // Fix: Read as text first to avoid Blob issues on React Native
+      const text = await response.text();
+      const data = JSON.parse(text);
       return data.results || [];
     } catch (error) {
       clearTimeout(timeoutId);
@@ -164,7 +166,9 @@ export class PerplexitySearchClient {
         throw new Error(`${taskName} failed: ${response.status} ${error}`);
       }
 
-      const data = await response.json();
+      // Fix: Read as text first to avoid Blob issues on React Native
+      const text = await response.text();
+      const data = JSON.parse(text);
       return data.choices?.[0]?.message?.content || '';
     } catch (error) {
       clearTimeout(timeoutId);
