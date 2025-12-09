@@ -3,4 +3,3 @@ boto3==1.37.0
 pydantic~=2.8.2
 uvicorn~=0.30.6
 httpx~=0.28.1
-beautifulsoup4~=4.12.3

@@ -17,8 +17,6 @@ interface CustomTextInputProps {
   placeholder: string;
   secureTextEntry?: boolean;
   numberOfLines?: number;
-  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
 const CustomTextInput: React.FC<CustomTextInputProps> = ({
@@ -28,8 +26,6 @@ const CustomTextInput: React.FC<CustomTextInputProps> = ({
   placeholder,
   secureTextEntry = false,
   numberOfLines = 1,
-  keyboardType = 'default',
-  autoCapitalize = 'sentences',
 }) => {
   const { colors, isDark } = useTheme();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -56,8 +52,6 @@ const CustomTextInput: React.FC<CustomTextInputProps> = ({
           onChangeText={onChangeText}
           placeholder={placeholder}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
         />
         {secureTextEntry && (
           <TouchableOpacity

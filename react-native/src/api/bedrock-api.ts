@@ -15,7 +15,6 @@ import {
   getApiUrl,
   getBedrockApiKey,
   getBedrockConfigMode,
-  getDebugEnabled,
   getDeepSeekApiKey,
   getImageModel,
   getImageSize,
@@ -44,7 +43,7 @@ type CallbackFunction = (
   complete: boolean,
   needStop: boolean,
   usage?: Usage,
-  reasoning?: string,
+  reasoning?: string
 ) => void;
 export const isDev = false;
 export const invokeBedrockWithCallBack = async (
@@ -53,21 +52,8 @@ export const invokeBedrockWithCallBack = async (
   prompt: SystemPrompt | null,
   shouldStop: () => boolean,
   controller: AbortController,
-  callback: CallbackFunction,
-  toolCallDepth: number = 0,
+  callback: CallbackFunction
 ) => {
-  // Prevent infinite tool calling loops
-  const MAX_TOOL_DEPTH = 5;
-  if (toolCallDepth >= MAX_TOOL_DEPTH) {
-    console.warn('[Bedrock] Max tool call depth reached:', toolCallDepth);
-    callback(
-      'Maximum tool call depth reached. Please try a simpler request.',
-      true,
-      false,
-    );
-    return;
-  }
-
   const currentModelTag = getModelTag(getTextModel());
   if (chatMode === ChatMode.Text && currentModelTag !== ModelTag.Bedrock) {
     if (
@@ -94,7 +80,7 @@ export const invokeBedrockWithCallBack = async (
         prompt,
         shouldStop,
         controller,
-        callback,
+        callback
       );
     } else {
       await invokeOpenAIWithCallBack(
@@ -102,7 +88,7 @@ export const invokeBedrockWithCallBack = async (
         prompt,
         shouldStop,
         controller,
-        callback,
+        callback
       );
     }
     return;
@@ -120,7 +106,7 @@ export const invokeBedrockWithCallBack = async (
         prompt,
         shouldStop,
         controller,
-        callback,
+        callback
       );
       return;
     }
@@ -128,7 +114,7 @@ export const invokeBedrockWithCallBack = async (
       callback(
         'Please configure your SwiftChat Server API URL and API Key',
         true,
-        false,
+        false
       );
       return;
     }
@@ -157,11 +143,6 @@ export const invokeBedrockWithCallBack = async (
     const url = getApiPrefix() + '/converse/v3';
     let completeMessage = '';
     let completeReasoning = '';
-    let collectedToolUses: Array<{
-      name: string;
-      input?: Record<string, unknown>;
-      toolUseId: string;
-    }> = [];
     const timeoutId = setTimeout(() => controller.abort(), 60000);
     fetch(url!, options)
       .then(response => {
@@ -195,157 +176,6 @@ export const invokeBedrockWithCallBack = async (
                 await sleep(0.1);
                 const bedrockChunk = parseChunk(event);
                 if (bedrockChunk) {
-                  // Collect tool use information
-                  if (bedrockChunk.toolUse) {
-                    console.log(
-                      '[Bedrock] Tool use requested:',
-                      bedrockChunk.toolUse,
-                    );
-                    collectedToolUses.push(bedrockChunk.toolUse);
-                  }
-
-                  // Handle tool execution when stop reason is tool_use
-                  if (
-                    bedrockChunk.stopReason === 'tool_use' &&
-                    collectedToolUses.length > 0
-                  ) {
-                    console.log(
-                      `[Bedrock] Executing ${collectedToolUses.length} tool(s)`,
-                    );
-
-                    // Show tool execution feedback
-                    const toolNames = collectedToolUses
-                      .map(t => t.name)
-                      .join(', ');
-                    callback(
-                      completeMessage +
-                        `\n\n🔧 **正在调用 ${collectedToolUses.length} 个工具**\n` +
-                        `工具: ${toolNames}`,
-                      false,
-                      false,
-                      undefined,
-                      completeReasoning,
-                    );
-
-                    try {
-                      const { callMCPTool } = await import('../mcp/MCPService');
-                      const startTime = Date.now();
-
-                      // 并发执行所有工具
-                      const toolPromises = collectedToolUses.map(
-                        async toolUse => {
-                          try {
-                            const result = await Promise.race([
-                              callMCPTool(
-                                toolUse.name,
-                                toolUse.input || {},
-                                getDebugEnabled(),
-                              ),
-                              new Promise((_, reject) =>
-                                setTimeout(
-                                  () => reject(new Error('Tool timeout')),
-                                  30000,
-                                ),
-                              ),
-                            ]);
-                            return { toolUse, result, success: true };
-                          } catch (error) {
-                            return {
-                              toolUse,
-                              error: String(error),
-                              success: false,
-                            };
-                          }
-                        },
-                      );
-
-                      const toolResults = await Promise.all(toolPromises);
-                      const executionTime = (
-                        (Date.now() - startTime) /
-                        1000
-                      ).toFixed(2);
-
-                      console.log('[Bedrock] Tool results:', toolResults);
-                      console.log(
-                        `[Bedrock] Total execution time: ${executionTime}s`,
-                      );
-
-                      // Show completion feedback
-                      const successCount = toolResults.filter(
-                        r => r.success,
-                      ).length;
-                      callback(
-                        completeMessage +
-                          `\n\n✅ **工具执行完成** (${executionTime}s)\n` +
-                          `成功: ${successCount}/${toolResults.length}\n` +
-                          `正在处理结果...`,
-                        false,
-                        false,
-                        undefined,
-                        completeReasoning,
-                      );
-
-                      // Add assistant message with all toolUses
-                      messages.push({
-                        role: 'assistant',
-                        content: collectedToolUses.map(toolUse => ({
-                          toolUse,
-                        })),
-                      });
-
-                      // Add user message with all toolResults
-                      messages.push({
-                        role: 'user',
-                        content: toolResults.map(tr => {
-                          let resultText = tr.success
-                            ? JSON.stringify(tr.result)
-                            : `Error: ${tr.error}`;
-
-                          if (resultText.length > 10000) {
-                            resultText =
-                              resultText.substring(0, 10000) + '...[truncated]';
-                          }
-
-                          return {
-                            toolResult: {
-                              toolUseId: tr.toolUse.toolUseId,
-                              content: [{ text: resultText }],
-                              status: tr.success ? 'success' : 'error',
-                            },
-                          };
-                        }),
-                      });
-
-                      // Continue conversation with tool result
-                      await invokeBedrockWithCallBack(
-                        messages,
-                        chatMode,
-                        prompt,
-                        shouldStop,
-                        controller,
-                        callback,
-                        toolCallDepth + 1,
-                      );
-                      return;
-                    } catch (toolError) {
-                      console.error(
-                        '[Bedrock] Tool execution error:',
-                        toolError,
-                      );
-                      callback(
-                        completeMessage +
-                          '\n\n[Tool execution failed: ' +
-                          toolError +
-                          ']',
-                        true,
-                        false,
-                        undefined,
-                        completeReasoning,
-                      );
-                      return;
-                    }
-                  }
-
                   if (bedrockChunk.reasoning) {
                     completeReasoning += bedrockChunk.reasoning ?? '';
                     callback(
@@ -353,7 +183,7 @@ export const invokeBedrockWithCallBack = async (
                       false,
                       false,
                       undefined,
-                      completeReasoning,
+                      completeReasoning
                     );
                   }
                   if (bedrockChunk.text) {
@@ -367,7 +197,7 @@ export const invokeBedrockWithCallBack = async (
                       false,
                       false,
                       undefined,
-                      completeReasoning,
+                      completeReasoning
                     );
                   }
                   if (bedrockChunk.usage) {
@@ -377,7 +207,7 @@ export const invokeBedrockWithCallBack = async (
                       false,
                       false,
                       bedrockChunk.usage,
-                      completeReasoning,
+                      completeReasoning
                     );
                   }
                 }
@@ -389,7 +219,7 @@ export const invokeBedrockWithCallBack = async (
                 true,
                 false,
                 undefined,
-                completeReasoning,
+                completeReasoning
               );
               return;
             }
@@ -443,7 +273,7 @@ export const invokeBedrockWithCallBack = async (
         imagePrompt,
         controller,
         image,
-        garmentImage,
+        garmentImage
       );
     } else {
       const images =
@@ -576,7 +406,7 @@ export const requestToken = async (): Promise<TokenResponse | null> => {
 
 export const requestUpgradeInfo = async (
   os: string,
-  version: string,
+  version: string
 ): Promise<UpgradeInfo> => {
   const url = getApiPrefix() + '/upgrade';
   const options = {
@@ -605,7 +435,7 @@ export const requestUpgradeInfo = async (
 export const genImage = async (
   imagePrompt: string,
   controller: AbortController,
-  images?: ImageInfo[],
+  images?: ImageInfo[]
 ): Promise<ImageRes> => {
   if (!isConfigured()) {
     return {
@@ -644,7 +474,7 @@ export const genImage = async (
     if (!response.ok) {
       const responseJson = await response.json();
       const errMsg = responseJson.detail.includes(
-        "You don't have access to the model",
+        "You don't have access to the model"
       )
         ? responseJson.detail +
           ' Please enable your `Nova Lite` model in the US region to support generating images with Chinese prompts.'
@@ -689,24 +519,8 @@ function parseChunk(part: string) {
     let combinedReasoning = '';
     let combinedText = '';
     let lastUsage;
-    let toolUse;
-    let stopReason;
-
     try {
       const chunk: BedrockChunk = JSON.parse(part);
-
-      // Check for tool use
-      if (chunk.contentBlockStart?.start?.toolUse) {
-        toolUse = chunk.contentBlockStart.start.toolUse;
-        console.log('[Tool Use Detected]', toolUse);
-      }
-
-      // Check for stop reason
-      if (chunk.messageStop?.stopReason) {
-        stopReason = chunk.messageStop.stopReason;
-        console.log('[Stop Reason]', stopReason);
-      }
-
       const content = extractChunkContent(chunk, part);
       if (content.reasoning) {
         combinedReasoning += content.reasoning;
@@ -729,8 +543,6 @@ function parseChunk(part: string) {
       reasoning: combinedReasoning,
       text: combinedText,
       usage: lastUsage,
-      toolUse,
-      stopReason,
     };
   }
   return null;

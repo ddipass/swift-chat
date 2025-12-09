@@ -45,17 +45,9 @@ const messageListKey = keyPrefix + 'messageList';
 const sessionIdPrefix = keyPrefix + 'sessionId/';
 const currentSessionIdKey = keyPrefix + 'currentSessionId';
 const hapticEnabledKey = keyPrefix + 'hapticEnabled';
-const debugEnabledKey = keyPrefix + 'debugEnabled';
-const toolTimeoutKey = keyPrefix + 'toolTimeout';
-const toolCacheTTLKey = keyPrefix + 'toolCacheTTL';
-const toolMaxRetriesKey = keyPrefix + 'toolMaxRetries';
 const apiUrlKey = keyPrefix + 'apiUrlKey';
 const apiKeyTag = keyPrefix + 'apiKeyTag';
 const ollamaApiUrlKey = keyPrefix + 'ollamaApiUrlKey';
-const mcpEnabledKey = keyPrefix + 'mcpEnabled';
-const mcpServerUrlKey = keyPrefix + 'mcpServerUrl';
-const mcpApiKeyKey = keyPrefix + 'mcpApiKey';
-const mcpMaxIterationsKey = keyPrefix + 'mcpMaxIterations';
 const ollamaApiKeyTag = keyPrefix + 'ollamaApiKeyTag';
 const deepSeekApiKeyTag = keyPrefix + 'deepSeekApiKeyTag';
 const openAIApiKeyTag = keyPrefix + 'openAIApiKeyTag';
@@ -108,7 +100,7 @@ let currentVirtualTryOnImgFile: FileInfo | undefined;
 export function saveMessages(
   sessionId: number,
   messages: SwiftChatMessage[],
-  usage: Usage,
+  usage: Usage
 ) {
   messages[0].usage = usage;
   messages.forEach((message, index) => {
@@ -122,7 +114,7 @@ export function saveMessages(
 export function saveMessageList(
   sessionId: number,
   fistMessage: SwiftChatMessage,
-  chatMode: ChatMode,
+  chatMode: ChatMode
 ) {
   let allMessageStr = getMessageListStr();
   const currentMessageStr = JSON.stringify({
@@ -171,7 +163,7 @@ export function deleteMessagesBySessionId(sessionId: number) {
 export function deleteAllMessages() {
   const chatList = getMessageList();
   chatList.forEach(chat => {
-    storage.delete(sessionIdPrefix + chat.id);
+    storage.delete(sessionIdPrefix + chat.sessionId);
   });
   storage.delete(messageListKey);
   storage.delete(currentSessionIdKey);
@@ -265,39 +257,6 @@ export function saveHapticEnabled(enabled: boolean) {
 
 export function getHapticEnabled() {
   return storage.getBoolean(hapticEnabledKey) ?? true;
-}
-
-export function saveDebugEnabled(enabled: boolean) {
-  storage.set(debugEnabledKey, enabled);
-}
-
-export function getDebugEnabled() {
-  return storage.getBoolean(debugEnabledKey) ?? false;
-}
-
-// 工具配置
-export function getToolTimeout() {
-  return storage.getNumber(toolTimeoutKey) ?? 60; // 默认60秒
-}
-
-export function saveToolTimeout(timeout: number) {
-  storage.set(toolTimeoutKey, timeout);
-}
-
-export function getToolCacheTTL() {
-  return storage.getNumber(toolCacheTTLKey) ?? 3600; // 默认1小时
-}
-
-export function saveToolCacheTTL(ttl: number) {
-  storage.set(toolCacheTTLKey, ttl);
-}
-
-export function getToolMaxRetries() {
-  return storage.getNumber(toolMaxRetriesKey) ?? 3; // 默认3次
-}
-
-export function saveToolMaxRetries(retries: number) {
-  storage.set(toolMaxRetriesKey, retries);
 }
 
 export function saveApiUrl(apiUrl: string) {
@@ -450,7 +409,7 @@ export function getModelUsage(): Usage[] {
 export function updateTotalUsage(usage: Usage) {
   const currentUsage = getModelUsage();
   const modelIndex = currentUsage.findIndex(
-    m => m.modelName === usage.modelName,
+    m => m.modelName === usage.modelName
   );
   if (modelIndex >= 0) {
     if (usage.imageCount) {
@@ -484,7 +443,7 @@ export function getCurrentSystemPrompt(): SystemPrompt | null {
 export function saveCurrentVoiceSystemPrompt(prompts: SystemPrompt | null) {
   storage.set(
     currentVoiceSystemPromptKey,
-    prompts ? JSON.stringify(prompts) : '',
+    prompts ? JSON.stringify(prompts) : ''
   );
 }
 
@@ -499,7 +458,7 @@ export function getCurrentVoiceSystemPrompt(): SystemPrompt | null {
 export function saveCurrentImageSystemPrompt(prompts: SystemPrompt | null) {
   storage.set(
     currentImageSystemPromptKey,
-    prompts ? JSON.stringify(prompts) : '',
+    prompts ? JSON.stringify(prompts) : ''
   );
 }
 
@@ -546,7 +505,7 @@ export function getSystemPrompts(type?: string): SystemPrompt[] {
       currentSystemPrompts.filter(p => p.promptType === 'voice').length === 0
     ) {
       currentSystemPrompts = currentSystemPrompts.concat(
-        DefaultVoiceSystemPrompts,
+        DefaultVoiceSystemPrompts
       );
       saveAllSystemPrompts(currentSystemPrompts);
     }
@@ -554,7 +513,7 @@ export function getSystemPrompts(type?: string): SystemPrompt[] {
       currentSystemPrompts.filter(p => p.promptType === 'image').length === 0
     ) {
       currentSystemPrompts = currentSystemPrompts.concat(
-        DefaultImageSystemPrompts,
+        DefaultImageSystemPrompts
       );
       saveAllSystemPrompts(currentSystemPrompts);
     }
@@ -767,7 +726,7 @@ export function getOpenAICompatConfigs(): OpenAICompatConfig[] {
     const configsStr = encryptStorage.getString(openAICompatConfigsKey);
     if (configsStr) {
       currentOpenAICompatibleConfig = JSON.parse(
-        configsStr,
+        configsStr
       ) as OpenAICompatConfig[];
       return currentOpenAICompatibleConfig;
     }
@@ -824,7 +783,7 @@ export function extractDomainFromUrl(url: string): string {
 
 // Generate OpenAI Compatible models from configs
 export function generateOpenAICompatModels(
-  configs: OpenAICompatConfig[],
+  configs: OpenAICompatConfig[]
 ): Model[] {
   const openAICompatModelList: Model[] = [];
 
@@ -853,172 +812,4 @@ export function generateOpenAICompatModels(
   });
 
   return openAICompatModelList;
-}
-
-export function getMCPEnabled(): boolean {
-  return storage.getBoolean(mcpEnabledKey) ?? false;
-}
-
-export function setMCPEnabled(enabled: boolean) {
-  storage.set(mcpEnabledKey, enabled);
-}
-
-// MCP Server Configuration
-export interface MCPServer {
-  id: string;
-  name: string;
-  url: string; // For HTTP/OAuth servers, or stdio://command/args format for stdio
-  apiKey: string;
-  enabled: boolean;
-  env?: Record<string, string>;
-  authType?: 'apiKey' | 'oauth'; // Authentication type
-  transport?: 'http' | 'stdio'; // Transport type: http (default) or stdio
-  oauthToken?: string; // OAuth access token
-  oauthRefreshToken?: string; // OAuth refresh token
-  oauthExpiry?: number; // Token expiry timestamp
-}
-
-const mcpServersKey = 'mcpServers';
-
-export function getMCPServers(): MCPServer[] {
-  const serversJson = storage.getString(mcpServersKey);
-  if (!serversJson) {
-    return [];
-  }
-  try {
-    return JSON.parse(serversJson);
-  } catch (e) {
-    return [];
-  }
-}
-
-export function setMCPServers(servers: MCPServer[]) {
-  storage.set(mcpServersKey, JSON.stringify(servers));
-}
-
-export function addMCPServer(server: MCPServer) {
-  const servers = getMCPServers();
-  servers.push(server);
-  setMCPServers(servers);
-}
-
-export function updateMCPServer(serverId: string, updates: Partial<MCPServer>) {
-  const servers = getMCPServers();
-  const index = servers.findIndex(s => s.id === serverId);
-  if (index !== -1) {
-    servers[index] = { ...servers[index], ...updates };
-    setMCPServers(servers);
-  }
-}
-
-export function removeMCPServer(serverId: string) {
-  const servers = getMCPServers();
-  setMCPServers(servers.filter(s => s.id !== serverId));
-}
-
-// Legacy single server support (for backward compatibility)
-export function getMCPServerUrl(): string {
-  return storage.getString(mcpServerUrlKey) ?? '';
-}
-
-export function setMCPServerUrl(url: string) {
-  storage.set(mcpServerUrlKey, url);
-}
-
-export function getMCPApiKey(): string {
-  return storage.getString(mcpApiKeyKey) ?? '';
-}
-
-export function setMCPApiKey(key: string) {
-  storage.set(mcpApiKeyKey, key);
-}
-
-export function getMCPMaxIterations(): number {
-  return storage.getNumber(mcpMaxIterationsKey) ?? 2;
-}
-
-export function setMCPMaxIterations(iterations: number) {
-  storage.set(mcpMaxIterationsKey, iterations);
-}
-
-// Web Fetch Settings
-const fetchTimeoutKey = 'fetchTimeout';
-const fetchMaxContentLengthKey = 'fetchMaxContentLength';
-
-export function getFetchTimeout(): number {
-  return storage.getNumber(fetchTimeoutKey) ?? 60000;
-}
-
-export function setFetchTimeout(timeout: number) {
-  storage.set(fetchTimeoutKey, timeout);
-}
-
-export function getFetchMaxContentLength(): number {
-  return storage.getNumber(fetchMaxContentLengthKey) ?? 5000;
-}
-
-export function setFetchMaxContentLength(length: number) {
-  storage.set(fetchMaxContentLengthKey, length);
-}
-
-// Content Processing Mode
-export type ContentProcessingMode = 'regex' | 'ai_summary';
-
-const contentProcessingModeKey = 'contentProcessingMode';
-const aiSummaryPromptKey = 'aiSummaryPrompt';
-const summaryModelKey = 'summaryModel';
-const removeElementsKey = 'removeElements';
-
-export function getContentProcessingMode(): ContentProcessingMode {
-  return (
-    (storage.getString(contentProcessingModeKey) as ContentProcessingMode) ??
-    'regex'
-  );
-}
-
-export function setContentProcessingMode(mode: ContentProcessingMode) {
-  storage.set(contentProcessingModeKey, mode);
-}
-
-// AI Summary Settings
-const DEFAULT_SUMMARY_PROMPT = `Extract main content from HTML.
-Requirements:
-- Keep original text verbatim
-- Remove all ads and navigation
-- Keep valuable reference links
-- Remove formatting, keep structure
-- Output plain text only`;
-
-export function getAISummaryPrompt(): string {
-  return storage.getString(aiSummaryPromptKey) ?? DEFAULT_SUMMARY_PROMPT;
-}
-
-export function setAISummaryPrompt(prompt: string) {
-  storage.set(aiSummaryPromptKey, prompt);
-}
-
-// Summary Model (for web fetch only, separate from chat model)
-export function getSummaryModel(): Model {
-  const modelString = storage.getString(summaryModelKey);
-  if (modelString) {
-    return JSON.parse(modelString) as Model;
-  }
-  // Default to chat model
-  return getTextModel();
-}
-
-export function setSummaryModel(model: Model) {
-  storage.set(summaryModelKey, JSON.stringify(model));
-}
-
-// Regex Settings
-const DEFAULT_REMOVE_ELEMENTS =
-  'script,style,nav,footer,aside,header,iframe,ads';
-
-export function getRemoveElements(): string {
-  return storage.getString(removeElementsKey) ?? DEFAULT_REMOVE_ELEMENTS;
-}
-
-export function setRemoveElements(elements: string) {
-  storage.set(removeElementsKey, elements);
 }
