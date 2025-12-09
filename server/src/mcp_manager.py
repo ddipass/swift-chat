@@ -212,6 +212,16 @@ class MCPManager:
         for server in self.servers.values():
             await server.stop()
 
+    async def update_server_token(self, server_name: str, oauth_token: str):
+        """更新服务器的OAuth token"""
+        if server_name in self.servers:
+            server = self.servers[server_name]
+            server.oauth_token = oauth_token
+            # 如果服务器已启动，重新启动以使用新token
+            if server.transport_type == TransportType.OAUTH:
+                await server.stop()
+                await server.start()
+
     async def initialize_from_config(self, servers_config: List[Dict[str, Any]]):
         """从配置初始化MCP服务器"""
         # 先关闭现有服务器

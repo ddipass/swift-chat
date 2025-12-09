@@ -15,6 +15,12 @@ from urllib.request import urlopen, Request
 import time
 from image_nl_processor import get_native_request_with_ref_image, get_analyse_result, get_native_request_with_virtual_try_on
 import httpx
+from mcp_oauth import start_oauth_flow, exchange_code_for_token, refresh_access_token, oauth_states, cleanup_expired_states
+from fastapi.responses import RedirectResponse
+import time
+
+# 存储MCP服务器配置（内存中）
+mcp_servers_config: dict = {}
 
 app = FastAPI()
 security = HTTPBearer()
@@ -536,6 +542,10 @@ async def execute_tool(
         return {"success": False, "error": "Tool manager not initialized"}
 
     try:
+        # 检查并刷新即将过期的token
+        for server_id in mcp_servers_config:
+            await refresh_token_if_needed(server_id)
+        
         result = await tool_manager.execute_tool(request.name, request.arguments)
         return {"success": True, "result": result}
     except Exception as e:
@@ -554,11 +564,167 @@ async def update_mcp_config(
         return {"success": False, "error": "Tool manager not initialized"}
 
     try:
+        # 保存配置到内存
+        global mcp_servers_config
+        for server in request.servers:
+            mcp_servers_config[server.get("id")] = server
+        
         # 重新初始化MCP服务器
         await tool_manager.mcp_manager.initialize_from_config(request.servers)
         return {"success": True, "message": "MCP configuration updated"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+class OAuthStartRequest(BaseModel):
+    server_id: str
+    server_url: str
+    server_name: str
+
+
+@app.post("/api/mcp/oauth/start")
+async def mcp_oauth_start(
+    request: OAuthStartRequest,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """启动MCP服务器的OAuth流程"""
+    verify_token(credentials.credentials)
+    
+    try:
+        # 清理过期的OAuth状态
+        cleanup_expired_states()
+        
+        # 生成OAuth授权URL
+        auth_url = await start_oauth_flow(
+            request.server_id,
+            request.server_url,
+            request.server_name
+        )
+        
+        return {"success": True, "auth_url": auth_url}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/mcp/oauth/callback")
+async def mcp_oauth_callback(code: str, state: str):
+    """处理OAuth回调"""
+    try:
+        # 获取存储的OAuth状态
+        oauth_state = oauth_states.get(state)
+        if not oauth_state:
+            raise HTTPException(status_code=400, detail="Invalid or expired state")
+        
+        # 交换code获取token
+        token_data = await exchange_code_for_token(
+            oauth_state["token_endpoint"],
+            code,
+            oauth_state["client_id"],
+            oauth_state["code_verifier"]
+        )
+        
+        server_id = oauth_state["server_id"]
+        access_token = token_data.get("access_token")
+        
+        if not access_token:
+            raise Exception("No access token received")
+        
+        # 保存token到配置
+        if server_id in mcp_servers_config:
+            mcp_servers_config[server_id]["oauthToken"] = access_token
+            if "refresh_token" in token_data:
+                mcp_servers_config[server_id]["oauthRefreshToken"] = token_data["refresh_token"]
+            if "expires_in" in token_data:
+                mcp_servers_config[server_id]["oauthExpiry"] = int(time.time()) + token_data["expires_in"]
+            
+            # 保存token_endpoint和client_id用于刷新
+            mcp_servers_config[server_id]["tokenEndpoint"] = oauth_state["token_endpoint"]
+            mcp_servers_config[server_id]["clientId"] = oauth_state["client_id"]
+            
+            # 更新MCPManager中的token
+            if tool_manager and tool_manager.mcp_manager:
+                server_name = mcp_servers_config[server_id].get("name")
+                if server_name:
+                    await tool_manager.mcp_manager.update_server_token(server_name, access_token)
+        
+        # 清理使用过的state
+        del oauth_states[state]
+        
+        # 重定向回前端，带上成功信息
+        return RedirectResponse(
+            url=f"swiftchat://oauth/success?server_id={server_id}",
+            status_code=302
+        )
+    except Exception as e:
+        # 重定向回前端，带上错误信息
+        return RedirectResponse(
+            url=f"swiftchat://oauth/error?error={str(e)}",
+            status_code=302
+        )
+
+
+@app.get("/api/mcp/server/{server_id}")
+async def get_mcp_server(
+    server_id: str,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """获取MCP服务器配置（包含OAuth token）"""
+    verify_token(credentials.credentials)
+    
+    if server_id in mcp_servers_config:
+        return {"success": True, "server": mcp_servers_config[server_id]}
+    else:
+        return {"success": False, "error": "Server not found"}
+
+
+async def refresh_token_if_needed(server_id: str) -> bool:
+    """检查并刷新token（如果需要）"""
+    if server_id not in mcp_servers_config:
+        return False
+    
+    server = mcp_servers_config[server_id]
+    
+    # 检查是否有refresh_token和必要信息
+    if not all([
+        server.get("oauthRefreshToken"),
+        server.get("tokenEndpoint"),
+        server.get("clientId")
+    ]):
+        return False
+    
+    # 检查token是否即将过期（提前5分钟刷新）
+    expiry = server.get("oauthExpiry", 0)
+    if expiry > time.time() + 300:  # 还有5分钟以上
+        return False
+    
+    try:
+        # 刷新token
+        token_data = await refresh_access_token(
+            server["tokenEndpoint"],
+            server["oauthRefreshToken"],
+            server["clientId"]
+        )
+        
+        # 更新配置
+        server["oauthToken"] = token_data["access_token"]
+        if "refresh_token" in token_data:
+            server["oauthRefreshToken"] = token_data["refresh_token"]
+        if "expires_in" in token_data:
+            server["oauthExpiry"] = int(time.time()) + token_data["expires_in"]
+        
+        # 更新MCPManager
+        if tool_manager and tool_manager.mcp_manager:
+            server_name = server.get("name")
+            if server_name:
+                await tool_manager.mcp_manager.update_server_token(
+                    server_name, 
+                    token_data["access_token"]
+                )
+        
+        return True
+    except Exception as e:
+        print(f"Failed to refresh token for {server_id}: {e}")
+        return False
 
 
 if __name__ == "__main__":

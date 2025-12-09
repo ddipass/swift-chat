@@ -25,9 +25,11 @@ import {
   MCPServer,
 } from '../storage/StorageUtils';
 import CustomTextInput from './CustomTextInput';
-import { startOAuthFlow, handleOAuthCallback } from '../mcp/MCPOAuth';
 import { BackendToolsClient } from '../mcp/BackendToolsClient';
 import { getApiUrl, getApiKey } from '../storage/StorageUtils';
+
+const API_URL = getApiUrl();
+const API_KEY = getApiKey();
 
 const syncMCPConfigToBackend = async (servers: MCPServer[]) => {
   try {
@@ -129,18 +131,43 @@ const MCPSettingsScreen = () => {
   // Listen for OAuth callback
   useEffect(() => {
     const subscription = Linking.addEventListener('url', async event => {
-      if (event.url.startsWith('swiftchat://oauth/callback')) {
-        const serverId = await handleOAuthCallback(event.url);
+      if (event.url.startsWith('swiftchat://oauth/success')) {
+        // OAuth成功 - 从后端获取更新的配置
+        const url = new URL(event.url);
+        const serverId = url.searchParams.get('server_id');
         if (serverId) {
-          // Refresh servers list
-          setServers(getMCPServers());
-          if (Platform.OS === 'web') {
-            // @ts-expect-error - alert is available in web
-            alert('OAuth authorization successful!');
-          } else {
-            Alert.alert('Success', 'OAuth authorization successful!');
+          try {
+            // 获取更新后的服务器配置（包含token）
+            const response = await fetch(
+              `${API_URL}/api/mcp/server/${serverId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${API_KEY}`,
+                },
+              }
+            );
+            const data = await response.json();
+
+            if (data.success && data.server) {
+              // 更新本地配置
+              updateMCPServer(serverId, {
+                oauthToken: data.server.oauthToken,
+                oauthRefreshToken: data.server.oauthRefreshToken,
+                oauthExpiry: data.server.oauthExpiry,
+              });
+              setServers(getMCPServers());
+            }
+          } catch (error) {
+            console.error('Failed to fetch server config:', error);
           }
+
+          Alert.alert('✅ Success', 'OAuth authorization successful!');
         }
+      } else if (event.url.startsWith('swiftchat://oauth/error')) {
+        // OAuth失败
+        const url = new URL(event.url);
+        const error = url.searchParams.get('error');
+        Alert.alert('❌ Authorization Failed', error || 'Unknown error');
       }
     });
 
@@ -149,7 +176,40 @@ const MCPSettingsScreen = () => {
 
   const handleAuthorize = async (server: MCPServer) => {
     try {
-      await startOAuthFlow(server);
+      // Call backend to start OAuth flow
+      const response = await fetch(`${API_URL}/api/mcp/oauth/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify({
+          server_id: server.id,
+          server_url: server.url,
+          server_name: server.name,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to start OAuth flow');
+      }
+
+      const authUrl = data.auth_url;
+
+      // Try to open the URL
+      const canOpen = await Linking.canOpenURL(authUrl);
+      if (canOpen) {
+        await Linking.openURL(authUrl);
+      } else {
+        // Show URL for manual opening
+        Alert.alert(
+          'Open Authorization URL',
+          `Please open this URL in your browser:\n\n${authUrl}`,
+          [{ text: 'OK' }]
+        );
+      }
     } catch (error) {
       // Extract detailed error message
       const errorMessage =
