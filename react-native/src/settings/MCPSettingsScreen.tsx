@@ -130,45 +130,57 @@ const MCPSettingsScreen = () => {
 
   // Listen for OAuth callback
   useEffect(() => {
-    const subscription = Linking.addEventListener('url', async event => {
-      if (event.url.startsWith('swiftchat://oauth/success')) {
-        // OAuth成功 - 从后端获取更新的配置
-        const url = new URL(event.url);
-        const serverId = url.searchParams.get('server_id');
-        if (serverId) {
-          try {
-            // 获取更新后的服务器配置（包含token）
-            const response = await fetch(
-              `${API_URL}/api/mcp/server/${serverId}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${API_KEY}`,
-                },
+    const subscription = Linking.addEventListener('url', event => {
+      const handleOAuthCallback = async () => {
+        try {
+          if (event.url.startsWith('swiftchat://oauth/success')) {
+            // OAuth成功 - 从后端获取更新的配置
+            const url = new URL(event.url);
+            const serverId = url.searchParams.get('server_id');
+            if (serverId) {
+              try {
+                // 获取更新后的服务器配置（包含token）
+                const response = await fetch(
+                  `${API_URL}/api/mcp/server/${serverId}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${API_KEY}`,
+                    },
+                  }
+                );
+                const data = await response.json();
+
+                if (data.success && data.server) {
+                  // 更新本地配置
+                  updateMCPServer(serverId, {
+                    oauthToken: data.server.oauthToken,
+                    oauthRefreshToken: data.server.oauthRefreshToken,
+                    oauthExpiry: data.server.oauthExpiry,
+                  });
+                  setServers(getMCPServers());
+                }
+              } catch (error) {
+                console.error('Failed to fetch server config:', error);
               }
-            );
-            const data = await response.json();
 
-            if (data.success && data.server) {
-              // 更新本地配置
-              updateMCPServer(serverId, {
-                oauthToken: data.server.oauthToken,
-                oauthRefreshToken: data.server.oauthRefreshToken,
-                oauthExpiry: data.server.oauthExpiry,
-              });
-              setServers(getMCPServers());
+              setTimeout(() => {
+                Alert.alert('✅ Success', 'OAuth authorization successful!');
+              }, 100);
             }
-          } catch (error) {
-            console.error('Failed to fetch server config:', error);
+          } else if (event.url.startsWith('swiftchat://oauth/error')) {
+            // OAuth失败
+            const url = new URL(event.url);
+            const error = url.searchParams.get('error');
+            setTimeout(() => {
+              Alert.alert('❌ Authorization Failed', error || 'Unknown error');
+            }, 100);
           }
-
-          Alert.alert('✅ Success', 'OAuth authorization successful!');
+        } catch (error) {
+          console.error('[MCPSettings] OAuth callback error:', error);
         }
-      } else if (event.url.startsWith('swiftchat://oauth/error')) {
-        // OAuth失败
-        const url = new URL(event.url);
-        const error = url.searchParams.get('error');
-        Alert.alert('❌ Authorization Failed', error || 'Unknown error');
-      }
+      };
+
+      handleOAuthCallback();
     });
 
     return () => subscription.remove();

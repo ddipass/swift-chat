@@ -46,6 +46,9 @@ const sessionIdPrefix = keyPrefix + 'sessionId/';
 const currentSessionIdKey = keyPrefix + 'currentSessionId';
 const hapticEnabledKey = keyPrefix + 'hapticEnabled';
 const debugEnabledKey = keyPrefix + 'debugEnabled';
+const toolTimeoutKey = keyPrefix + 'toolTimeout';
+const toolCacheTTLKey = keyPrefix + 'toolCacheTTL';
+const toolMaxRetriesKey = keyPrefix + 'toolMaxRetries';
 const apiUrlKey = keyPrefix + 'apiUrlKey';
 const apiKeyTag = keyPrefix + 'apiKeyTag';
 const ollamaApiUrlKey = keyPrefix + 'ollamaApiUrlKey';
@@ -105,7 +108,7 @@ let currentVirtualTryOnImgFile: FileInfo | undefined;
 export function saveMessages(
   sessionId: number,
   messages: SwiftChatMessage[],
-  usage: Usage
+  usage: Usage,
 ) {
   messages[0].usage = usage;
   messages.forEach((message, index) => {
@@ -119,7 +122,7 @@ export function saveMessages(
 export function saveMessageList(
   sessionId: number,
   fistMessage: SwiftChatMessage,
-  chatMode: ChatMode
+  chatMode: ChatMode,
 ) {
   let allMessageStr = getMessageListStr();
   const currentMessageStr = JSON.stringify({
@@ -272,6 +275,31 @@ export function getDebugEnabled() {
   return storage.getBoolean(debugEnabledKey) ?? false;
 }
 
+// 工具配置
+export function getToolTimeout() {
+  return storage.getNumber(toolTimeoutKey) ?? 60; // 默认60秒
+}
+
+export function saveToolTimeout(timeout: number) {
+  storage.set(toolTimeoutKey, timeout);
+}
+
+export function getToolCacheTTL() {
+  return storage.getNumber(toolCacheTTLKey) ?? 3600; // 默认1小时
+}
+
+export function saveToolCacheTTL(ttl: number) {
+  storage.set(toolCacheTTLKey, ttl);
+}
+
+export function getToolMaxRetries() {
+  return storage.getNumber(toolMaxRetriesKey) ?? 3; // 默认3次
+}
+
+export function saveToolMaxRetries(retries: number) {
+  storage.set(toolMaxRetriesKey, retries);
+}
+
 export function saveApiUrl(apiUrl: string) {
   storage.set(apiUrlKey, apiUrl);
 }
@@ -422,7 +450,7 @@ export function getModelUsage(): Usage[] {
 export function updateTotalUsage(usage: Usage) {
   const currentUsage = getModelUsage();
   const modelIndex = currentUsage.findIndex(
-    m => m.modelName === usage.modelName
+    m => m.modelName === usage.modelName,
   );
   if (modelIndex >= 0) {
     if (usage.imageCount) {
@@ -456,7 +484,7 @@ export function getCurrentSystemPrompt(): SystemPrompt | null {
 export function saveCurrentVoiceSystemPrompt(prompts: SystemPrompt | null) {
   storage.set(
     currentVoiceSystemPromptKey,
-    prompts ? JSON.stringify(prompts) : ''
+    prompts ? JSON.stringify(prompts) : '',
   );
 }
 
@@ -471,7 +499,7 @@ export function getCurrentVoiceSystemPrompt(): SystemPrompt | null {
 export function saveCurrentImageSystemPrompt(prompts: SystemPrompt | null) {
   storage.set(
     currentImageSystemPromptKey,
-    prompts ? JSON.stringify(prompts) : ''
+    prompts ? JSON.stringify(prompts) : '',
   );
 }
 
@@ -518,7 +546,7 @@ export function getSystemPrompts(type?: string): SystemPrompt[] {
       currentSystemPrompts.filter(p => p.promptType === 'voice').length === 0
     ) {
       currentSystemPrompts = currentSystemPrompts.concat(
-        DefaultVoiceSystemPrompts
+        DefaultVoiceSystemPrompts,
       );
       saveAllSystemPrompts(currentSystemPrompts);
     }
@@ -526,7 +554,7 @@ export function getSystemPrompts(type?: string): SystemPrompt[] {
       currentSystemPrompts.filter(p => p.promptType === 'image').length === 0
     ) {
       currentSystemPrompts = currentSystemPrompts.concat(
-        DefaultImageSystemPrompts
+        DefaultImageSystemPrompts,
       );
       saveAllSystemPrompts(currentSystemPrompts);
     }
@@ -739,7 +767,7 @@ export function getOpenAICompatConfigs(): OpenAICompatConfig[] {
     const configsStr = encryptStorage.getString(openAICompatConfigsKey);
     if (configsStr) {
       currentOpenAICompatibleConfig = JSON.parse(
-        configsStr
+        configsStr,
       ) as OpenAICompatConfig[];
       return currentOpenAICompatibleConfig;
     }
@@ -796,7 +824,7 @@ export function extractDomainFromUrl(url: string): string {
 
 // Generate OpenAI Compatible models from configs
 export function generateOpenAICompatModels(
-  configs: OpenAICompatConfig[]
+  configs: OpenAICompatConfig[],
 ): Model[] {
   const openAICompatModelList: Model[] = [];
 
@@ -825,79 +853,6 @@ export function generateOpenAICompatModels(
   });
 
   return openAICompatModelList;
-}
-
-// Perplexity Search Configuration
-const perplexityEnabledKey = keyPrefix + 'perplexityEnabled';
-const perplexityApiKeyTag = keyPrefix + 'perplexityApiKeyTag';
-const perplexityBaseUrlKey = keyPrefix + 'perplexityBaseUrl';
-const perplexityEnabledToolsKey = keyPrefix + 'perplexityEnabledTools';
-
-export function getPerplexityEnabled(): boolean {
-  return storage.getBoolean(perplexityEnabledKey) ?? false;
-}
-
-export function setPerplexityEnabled(enabled: boolean) {
-  storage.set(perplexityEnabledKey, enabled);
-}
-
-export function getPerplexityApiKey(): string {
-  return storage.getString(perplexityApiKeyTag) ?? '';
-}
-
-export function savePerplexityApiKey(key: string) {
-  storage.set(perplexityApiKeyTag, key);
-}
-
-export function getPerplexityBaseUrl(): string {
-  return storage.getString(perplexityBaseUrlKey) || 'https://api.perplexity.ai';
-}
-
-export function savePerplexityBaseUrl(url: string) {
-  storage.set(perplexityBaseUrlKey, url);
-}
-
-export function getPerplexityEnabledTools(): string[] {
-  const tools = storage.getString(perplexityEnabledToolsKey);
-  if (!tools) {
-    return ['search']; // Default: only search enabled
-  }
-  try {
-    return JSON.parse(tools);
-  } catch {
-    return ['search'];
-  }
-}
-
-export function savePerplexityEnabledTools(tools: string[]) {
-  storage.set(perplexityEnabledToolsKey, JSON.stringify(tools));
-}
-
-const perplexityToolDescriptionsKey = keyPrefix + 'perplexityToolDescriptions';
-
-export interface PerplexityToolDescription {
-  search?: string;
-  ask?: string;
-  research?: string;
-  reason?: string;
-}
-
-export function getPerplexityToolDescriptions(): PerplexityToolDescription {
-  const descriptions = storage.getString(perplexityToolDescriptionsKey);
-  if (!descriptions) {
-    return {};
-  }
-  try {
-    return JSON.parse(descriptions);
-  } catch {
-    return {};
-  }
-}
-
-export function savePerplexityToolDescriptions(
-  descriptions: PerplexityToolDescription
-) {
-  storage.set(perplexityToolDescriptionsKey, JSON.stringify(descriptions));
 }
 
 export function getMCPEnabled(): boolean {

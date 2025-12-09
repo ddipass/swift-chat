@@ -45,17 +45,17 @@ class ToolManager:
 
         return tools
 
-    async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    async def execute_tool(self, tool_name: str, arguments: Dict[str, Any], debug: bool = False) -> Any:
         """执行工具"""
         # 先查找MCP工具
         try:
-            return await self.mcp_manager.execute_tool(tool_name, arguments)
+            return await self.mcp_manager.execute_tool(tool_name, arguments, debug)
         except ValueError:
             pass
 
         # 再查找Built-in工具
         try:
-            return await self.builtin_tools.execute(tool_name, arguments)
+            return await self.builtin_tools.execute(tool_name, arguments, debug)
         except ValueError:
             pass
 

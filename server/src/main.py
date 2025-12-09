@@ -21,6 +21,7 @@ import time
 
 # 存储MCP服务器配置（内存中）
 mcp_servers_config: dict = {}
+config_store = None  # 配置持久化
 
 app = FastAPI()
 security = HTTPBearer()
@@ -464,33 +465,43 @@ tool_manager = None
 @app.on_event("startup")
 async def startup_event():
     """启动时初始化工具"""
-    global tool_manager
+    global tool_manager, config_store
     tool_manager = ToolManager()
-
-    # 从环境变量读取配置
+    
+    # 初始化配置存储
+    from config_store import ConfigStore
+    config_store = ConfigStore("mcp_config.json")
+    
+    # 先尝试从文件加载配置
+    saved_servers = config_store.load_mcp_servers()
+    
     config = {
-        "mcp_servers": []
+        "mcp_servers": saved_servers if saved_servers else []
     }
-
-    # 示例：从环境变量添加MCP服务器
-    # MCP_SERVERS=notion:stdio:npx:-y:@modelcontextprotocol/server-notion
-    mcp_servers_env = os.environ.get("MCP_SERVERS", "")
-    if mcp_servers_env:
-        for server_str in mcp_servers_env.split(";"):
-            parts = server_str.split(":")
-            if len(parts) >= 3:
-                name = parts[0]
-                transport = parts[1]
-                if transport == "stdio":
-                    command = parts[2]
-                    args = parts[3:] if len(parts) > 3 else []
-                    config["mcp_servers"].append({
-                        "name": name,
-                        "transport": "stdio",
-                        "command": command,
-                        "args": args,
-                        "env": {}
-                    })
+    
+    # 如果没有保存的配置，从环境变量读取
+    if not saved_servers:
+        mcp_servers_env = os.environ.get("MCP_SERVERS", "")
+        if mcp_servers_env:
+            for server_str in mcp_servers_env.split(";"):
+                parts = server_str.split(":")
+                if len(parts) >= 3:
+                    name = parts[0]
+                    transport = parts[1]
+                    if transport == "stdio":
+                        command = parts[2]
+                        args = parts[3:] if len(parts) > 3 else []
+                        config["mcp_servers"].append({
+                            "name": name,
+                            "transport": "stdio",
+                            "command": command,
+                            "args": args,
+                            "env": {}
+                        })
+            
+            # 保存到文件
+            if config["mcp_servers"]:
+                config_store.save_mcp_servers(config["mcp_servers"])
 
     await tool_manager.initialize(config)
 
@@ -509,6 +520,7 @@ class ToolListRequest(BaseModel):
 class ToolExecuteRequest(BaseModel):
     name: str
     arguments: dict
+    debug: bool = False
 
 
 class MCPConfigRequest(BaseModel):
@@ -546,10 +558,73 @@ async def execute_tool(
         for server_id in mcp_servers_config:
             await refresh_token_if_needed(server_id)
         
-        result = await tool_manager.execute_tool(request.name, request.arguments)
-        return {"success": True, "result": result}
+        import time
+        from tool_stats import tool_stats
+        
+        start_time = time.time()
+        success = False
+        error_msg = None
+        
+        try:
+            result = await tool_manager.execute_tool(request.name, request.arguments, request.debug)
+            execution_time = time.time() - start_time
+            success = True
+            
+            # 记录统计
+            tool_stats.record_call(request.name, True, execution_time)
+            
+            response = {"success": True, "result": result}
+            
+            # 添加debug信息
+            if request.debug:
+                response["_debug"] = {
+                    "tool_name": request.name,
+                    "arguments": request.arguments,
+                    "execution_time": f"{execution_time:.3f}s",
+                    "timestamp": time.time()
+                }
+                if isinstance(result, dict) and "_debug" in result:
+                    response["_debug"].update(result["_debug"])
+            
+            return response
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            error_msg = str(e)
+            
+            # 记录失败统计
+            tool_stats.record_call(request.name, False, execution_time, error_msg)
+            raise
+            
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        import traceback
+        error_response = {"success": False, "error": str(e)}
+        if request.debug:
+            error_response["_debug"] = {
+                "tool_name": request.name,
+                "arguments": request.arguments,
+                "traceback": traceback.format_exc()
+            }
+        return error_response
+
+
+@app.get("/api/tools/stats")
+async def get_tool_stats(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    tool_name: str = None
+):
+    """获取工具调用统计"""
+    verify_token(credentials.credentials)
+    
+    from tool_stats import tool_stats
+    
+    if tool_name:
+        return {"tool": tool_name, "stats": tool_stats.get_stats(tool_name)}
+    else:
+        return {
+            "summary": tool_stats.get_summary(),
+            "details": tool_stats.get_stats()
+        }
 
 
 @app.post("/api/mcp/config")
@@ -569,9 +644,12 @@ async def update_mcp_config(
         for server in request.servers:
             mcp_servers_config[server.get("id")] = server
         
+        # 持久化到文件
+        config_store.save_mcp_servers(request.servers)
+        
         # 重新初始化MCP服务器
         await tool_manager.mcp_manager.initialize_from_config(request.servers)
-        return {"success": True, "message": "MCP configuration updated"}
+        return {"success": True, "message": "MCP configuration updated and saved"}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

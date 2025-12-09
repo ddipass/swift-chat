@@ -53,7 +53,8 @@ export class BackendToolsClient {
 
   async executeTool(
     name: string,
-    args: Record<string, unknown>
+    args: Record<string, unknown>,
+    debug: boolean = false,
   ): Promise<unknown> {
     const response = await fetch(`${this.apiUrl}/api/tool/exec`, {
       method: 'POST',
@@ -64,6 +65,7 @@ export class BackendToolsClient {
       body: JSON.stringify({
         name,
         arguments: args,
+        debug,
       }),
     });
 
@@ -75,6 +77,11 @@ export class BackendToolsClient {
 
     if (!data.success) {
       throw new Error(data.error || 'Tool execution failed');
+    }
+
+    // 如果开启debug，打印debug信息
+    if (debug && data._debug) {
+      console.log('[Tool Debug]', JSON.stringify(data._debug, null, 2));
     }
 
     return data.result;

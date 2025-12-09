@@ -119,13 +119,13 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
   const handleDelete = () => {
     // update ui
     setGroupChatHistory(prevHistory =>
-      prevHistory.filter(chat => chat.id !== deleteIdRef.current)
+      prevHistory.filter(chat => chat.id !== deleteIdRef.current),
     );
     sendEvent('deleteChat', { id: deleteIdRef.current });
 
     // update storage
     chatHistoryRef.current = chatHistoryRef.current.filter(
-      chat => chat.id !== deleteIdRef.current
+      chat => chat.id !== deleteIdRef.current,
     );
     updateMessageList(chatHistoryRef.current);
     deleteMessagesBySessionId(deleteIdRef.current);
@@ -190,7 +190,7 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
                 trigger(HapticFeedbackTypes.notificationWarning);
                 if (Platform.OS === 'web') {
                   const confirmed = window.confirm(
-                    'Delete all conversations? This cannot be undone.'
+                    'Delete all conversations? This cannot be undone.',
                   );
                   if (confirmed) {
                     deleteAllMessages();
@@ -214,7 +214,7 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
                           sendEvent('deleteAllChats');
                         },
                       },
-                    ]
+                    ],
                   );
                 }
               }}>
@@ -303,22 +303,6 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
           style={styles.settingsLeftImg}
         />
         <Text style={styles.settingsText}>Web Fetch</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.settingsTouch}
-        onPress={() => {
-          setDrawerToPermanent();
-          navigation.navigate('PerplexitySettings');
-        }}>
-        <Image
-          source={
-            isDark
-              ? require('../assets/bedrock.png')
-              : require('../assets/bedrock.png')
-          }
-          style={styles.settingsLeftImg}
-        />
-        <Text style={styles.settingsText}>🔍 Perplexity</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.settingsTouch}

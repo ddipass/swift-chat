@@ -4,6 +4,7 @@ MCP Manager - 支持stdio和OAuth两种transport方式
 import asyncio
 import json
 import httpx
+import time
 from typing import List, Dict, Any, Optional
 from enum import Enum
 
@@ -41,6 +42,9 @@ class MCPServer:
         self.process = None
         self.tools: List[MCPTool] = []
         self.request_id = 0
+        self.last_health_check = 0
+        self.restart_count = 0
+        self.max_restarts = 3
 
     async def start(self):
         """启动MCP服务器"""
@@ -117,10 +121,45 @@ class MCPServer:
 
     async def execute(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """执行工具"""
+        # 检查进程健康状态
+        if self.transport_type == TransportType.STDIO:
+            await self._check_health()
+        
         if self.transport_type == TransportType.STDIO:
             return await self._execute_stdio(tool_name, arguments)
         else:
             return await self._execute_oauth(tool_name, arguments)
+    
+    async def _check_health(self):
+        """检查stdio进程健康状态"""
+        if not self.process:
+            raise Exception(f"MCP Server {self.name} not started")
+        
+        # 检查进程是否还在运行
+        if self.process.returncode is not None:
+            print(f"[MCP] Server {self.name} process died, attempting restart...")
+            if self.restart_count < self.max_restarts:
+                self.restart_count += 1
+                await self.start()
+            else:
+                raise Exception(f"MCP Server {self.name} failed after {self.max_restarts} restart attempts")
+        
+        # 每30秒做一次健康检查
+        current_time = time.time()
+        if current_time - self.last_health_check > 30:
+            try:
+                # 发送简单的ping请求
+                response = await asyncio.wait_for(
+                    self._send_stdio_request({"method": "ping", "params": {}}),
+                    timeout=5.0
+                )
+                self.last_health_check = current_time
+            except asyncio.TimeoutError:
+                print(f"[MCP] Server {self.name} health check timeout")
+                # 不立即重启，等待下次调用
+            except Exception as e:
+                print(f"[MCP] Server {self.name} health check failed: {e}")
+
 
     async def _execute_stdio(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """通过stdio执行工具"""
@@ -198,12 +237,58 @@ class MCPManager:
                 )
         return tools
 
-    async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
-        """执行工具"""
-        for server in self.servers.values():
+    async def execute_tool(self, tool_name: str, arguments: Dict[str, Any], debug: bool = False) -> Any:
+        """执行工具（带重试）"""
+        max_retries = 3
+        retry_delay = 1  # 秒
+        
+        for server_name, server in self.servers.items():
             for tool in server.tools:
                 if tool.name == tool_name:
-                    return await server.execute(tool_name, arguments)
+                    last_error = None
+                    
+                    for attempt in range(max_retries):
+                        try:
+                            # 添加超时控制
+                            result = await asyncio.wait_for(
+                                server.execute(tool_name, arguments),
+                                timeout=60.0  # 60秒超时
+                            )
+                            
+                            # 添加debug信息
+                            if debug:
+                                if isinstance(result, dict):
+                                    if "_debug" not in result:
+                                        result["_debug"] = {}
+                                    result["_debug"]["mcp_server"] = server_name
+                                    result["_debug"]["transport"] = server.transport_type.value
+                                    if attempt > 0:
+                                        result["_debug"]["retry_count"] = attempt
+                                else:
+                                    result = {
+                                        "content": result,
+                                        "_debug": {
+                                            "mcp_server": server_name,
+                                            "transport": server.transport_type.value,
+                                            "retry_count": attempt if attempt > 0 else None
+                                        }
+                                    }
+                            
+                            return result
+                            
+                        except asyncio.TimeoutError:
+                            last_error = f"Tool execution timeout (60s)"
+                            print(f"[MCP] Tool {tool_name} timeout, attempt {attempt + 1}/{max_retries}")
+                        except Exception as e:
+                            last_error = str(e)
+                            print(f"[MCP] Tool {tool_name} error: {e}, attempt {attempt + 1}/{max_retries}")
+                        
+                        # 如果不是最后一次尝试，等待后重试
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(retry_delay * (attempt + 1))  # 指数退避
+                    
+                    # 所有重试都失败
+                    raise Exception(f"Tool {tool_name} failed after {max_retries} attempts: {last_error}")
 
         raise ValueError(f"Tool {tool_name} not found")
 

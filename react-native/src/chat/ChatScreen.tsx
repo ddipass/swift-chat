@@ -36,6 +36,7 @@ import {
   getMessagesBySessionId,
   getSessionId,
   getTextModel,
+  getDebugEnabled,
   isTokenValid,
   saveCurrentImageSystemPrompt,
   saveCurrentSystemPrompt,
@@ -112,11 +113,11 @@ function ChatScreen(): React.JSX.Element {
   const [messages, setMessages] = useState<SwiftChatMessage[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
   const [systemPrompt, setSystemPrompt] = useState<SystemPrompt | null>(
-    isNovaSonic ? getCurrentVoiceSystemPrompt : getCurrentSystemPrompt
+    isNovaSonic ? getCurrentVoiceSystemPrompt : getCurrentSystemPrompt,
   );
   const [showSystemPrompt, setShowSystemPrompt] = useState<boolean>(true);
   const [screenDimensions, setScreenDimensions] = useState(
-    Dimensions.get('window')
+    Dimensions.get('window'),
   );
   const [chatStatus, setChatStatus] = useState<ChatStatus>(ChatStatus.Init);
   const [usage, setUsage] = useState<Usage>();
@@ -199,7 +200,7 @@ function ChatScreen(): React.JSX.Element {
           saveCurrentMessages();
           console.log('Voice chat error:', message);
         }
-      }
+      },
     );
 
     // Clean up on unmounting
@@ -222,7 +223,7 @@ function ChatScreen(): React.JSX.Element {
       bedrockMessages.current = [];
       setShowSystemPrompt(true);
       showKeyboard();
-    }, [])
+    }, []),
   );
 
   // header text and right button click
@@ -386,7 +387,7 @@ function ChatScreen(): React.JSX.Element {
 
     const subscription = Dimensions.addEventListener(
       'change',
-      updateDimensions
+      updateDimensions,
     );
 
     return () => {
@@ -436,7 +437,7 @@ function ChatScreen(): React.JSX.Element {
     };
     const subscription = AppState.addEventListener(
       'change',
-      handleAppStateChange
+      handleAppStateChange,
     );
     return () => {
       subscription.remove();
@@ -465,7 +466,7 @@ function ChatScreen(): React.JSX.Element {
       saveMessageList(
         sessionIdRef.current,
         messagesRef.current[messagesRef.current.length - 1],
-        modeRef.current
+        modeRef.current,
       );
       isNewChatRef.current = false;
     }
@@ -510,7 +511,7 @@ function ChatScreen(): React.JSX.Element {
   const scrollUpByHeight = (
     expanded: boolean,
     height: number,
-    animated: boolean
+    animated: boolean,
   ) => {
     if (flatListRef.current) {
       const newOffset =
@@ -523,7 +524,7 @@ function ChatScreen(): React.JSX.Element {
   };
 
   const handleScroll = (
-    scrollEvent: NativeSyntheticEvent<NativeScrollEvent>
+    scrollEvent: NativeSyntheticEvent<NativeScrollEvent>,
   ) => {
     currentScrollOffsetRef.current = scrollEvent.nativeEvent.contentOffset.y;
   };
@@ -535,7 +536,7 @@ function ChatScreen(): React.JSX.Element {
   };
 
   const handleMomentumScrollEnd = (
-    endEvent: NativeSyntheticEvent<NativeScrollEvent>
+    endEvent: NativeSyntheticEvent<NativeScrollEvent>,
   ) => {
     if (chatStatusRef.current === ChatStatus.Running && userScrolled) {
       const { contentOffset } = endEvent.nativeEvent;
@@ -577,7 +578,7 @@ function ChatScreen(): React.JSX.Element {
           complete: boolean,
           needStop: boolean,
           usageInfo?: Usage,
-          reasoning?: string
+          reasoning?: string,
         ) => {
           if (chatStatusRef.current !== ChatStatus.Running) {
             return;
@@ -635,12 +636,10 @@ function ChatScreen(): React.JSX.Element {
 
             // Check for tool calls in text mode
             if (modeRef.current === ChatMode.Text && !needStop) {
-              const { detectToolCall, executeToolCall } = await import(
-                '../mcp/MCPService'
-              );
-              const { getMCPMaxIterations } = await import(
-                '../storage/StorageUtils'
-              );
+              const { detectToolCall, executeToolCall } =
+                await import('../mcp/MCPService');
+              const { getMCPMaxIterations } =
+                await import('../storage/StorageUtils');
               const toolCall = detectToolCall(msg);
               const maxIterations = getMCPMaxIterations();
 
@@ -672,9 +671,11 @@ function ChatScreen(): React.JSX.Element {
 
                 // Execute tool with error handling
                 try {
+                  const debugEnabled = getDebugEnabled();
                   const toolResult = await executeToolCall(
                     toolCall.toolName,
-                    toolCall.toolArgs
+                    toolCall.toolArgs,
+                    debugEnabled,
                   );
 
                   // Check if tool execution failed
@@ -788,7 +789,7 @@ function ChatScreen(): React.JSX.Element {
           if (needStop) {
             isCanceled.current = true;
           }
-        }
+        },
       ).then();
     }
   }, [messages]);
@@ -881,7 +882,7 @@ function ChatScreen(): React.JSX.Element {
         prevFiles,
         files,
         modeRef.current,
-        isVirtualTryOn
+        isVirtualTryOn,
       );
     });
   };
@@ -933,8 +934,8 @@ function ChatScreen(): React.JSX.Element {
           Platform.OS === 'android'
             ? 0
             : screenHeight > screenWidth && screenWidth < 500
-            ? 32 // iphone in portrait
-            : 20
+              ? 32 // iphone in portrait
+              : 20
         }
         messages={messages}
         onSend={onSend}
@@ -1055,7 +1056,7 @@ function ChatScreen(): React.JSX.Element {
         renderMessage={props => {
           // Find the index of the current message in the messages array
           const messageIndex = messages.findIndex(
-            msg => msg._id === props.currentMessage?._id
+            msg => msg._id === props.currentMessage?._id,
           );
 
           return (
@@ -1083,7 +1084,7 @@ function ChatScreen(): React.JSX.Element {
                         createBotMessage(modeRef.current),
                         ...previousMessages.slice(userMessageIndex),
                       ]);
-                    }
+                    },
                   );
                 }
               }}

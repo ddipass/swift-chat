@@ -26,6 +26,12 @@ import {
   getHapticEnabled,
   getDebugEnabled,
   saveDebugEnabled,
+  getToolTimeout,
+  saveToolTimeout,
+  getToolCacheTTL,
+  saveToolCacheTTL,
+  getToolMaxRetries,
+  saveToolMaxRetries,
   getImageModel,
   getImageSize,
   getModelUsage,
@@ -112,7 +118,7 @@ function SettingsScreen(): React.JSX.Element {
   const [deepSeekApiKey, setDeepSeekApiKey] = useState(getDeepSeekApiKey);
   const [openAIApiKey, setOpenAIApiKey] = useState(getOpenAIApiKey);
   const [openAIProxyEnabled, setOpenAIProxyEnabled] = useState(
-    getOpenAIProxyEnabled
+    getOpenAIProxyEnabled,
   );
   const [openAICompatConfigs, setOpenAICompatConfigs] = useState<
     OpenAICompatConfig[]
@@ -121,13 +127,16 @@ function SettingsScreen(): React.JSX.Element {
   const [imageSize, setImageSize] = useState(getImageSize);
   const [hapticEnabled, setHapticEnabled] = useState(getHapticEnabled);
   const [debugEnabled, setDebugEnabled] = useState(getDebugEnabled);
+  const [toolTimeout, setToolTimeout] = useState(getToolTimeout);
+  const [toolCacheTTL, setToolCacheTTL] = useState(getToolCacheTTL);
+  const [toolMaxRetries, setToolMaxRetries] = useState(getToolMaxRetries);
   const navigation = useNavigation<NavigationProp<RouteParamList>>();
   const [textModels, setTextModels] = useState<Model[]>(allModel.textModel);
   const [selectedTextModel, setSelectedTextModel] =
     useState<Model>(getTextModel);
   const [imageModels, setImageModels] = useState<Model[]>(allModel.imageModel);
   const [selectedImageModel, setSelectedImageModel] = useState<string>(
-    getImageModel().modelId
+    getImageModel().modelId,
   );
   const [upgradeInfo, setUpgradeInfo] = useState<UpgradeInfo>(initUpgradeInfo);
   const [cost, setCost] = useState('0.00');
@@ -148,7 +157,7 @@ function SettingsScreen(): React.JSX.Element {
     (configs: OpenAICompatConfig[]) => {
       setOpenAICompatConfigs(configs);
     },
-    []
+    [],
   );
 
   const fetchAndSetModelNames = useCallback(
@@ -162,7 +171,7 @@ function SettingsScreen(): React.JSX.Element {
       } else if (!shouldFetchOllama) {
         // Filter existing Ollama models from current textModels
         ollamaModels = textModels.filter(
-          model => model.modelTag === ModelTag.Ollama
+          model => model.modelTag === ModelTag.Ollama,
         );
       }
 
@@ -179,13 +188,13 @@ function SettingsScreen(): React.JSX.Element {
         addBedrockPrefixToDeepseekModels(bedrockResponse.textModel);
         if (Platform.OS === 'android') {
           bedrockResponse.textModel = bedrockResponse.textModel.filter(
-            model => model.modelName !== 'Nova Sonic'
+            model => model.modelName !== 'Nova Sonic',
           );
         }
       } else {
         // Filter existing Bedrock models from current models
         bedrockResponse.textModel = textModels.filter(
-          model => !model.modelTag || model.modelTag === ModelTag.Bedrock
+          model => !model.modelTag || model.modelTag === ModelTag.Bedrock,
         );
         bedrockResponse.imageModel = imageModels;
       }
@@ -195,7 +204,7 @@ function SettingsScreen(): React.JSX.Element {
         setImageModels(bedrockResponse.imageModel);
         const imageModel = getImageModel();
         const targetModels = bedrockResponse.imageModel.filter(
-          model => model.modelName === imageModel.modelName
+          model => model.modelName === imageModel.modelName,
         );
         if (targetModels && targetModels.length === 1) {
           setSelectedImageModel(targetModels[0].modelId);
@@ -208,7 +217,7 @@ function SettingsScreen(): React.JSX.Element {
 
       // Generate OpenAI Compatible models
       const openAICompatModelList = generateOpenAICompatModels(
-        openAICompatConfigsRef.current
+        openAICompatConfigsRef.current,
       );
 
       // Combine all text models
@@ -232,7 +241,7 @@ function SettingsScreen(): React.JSX.Element {
       // Update selected text model
       const textModel = getTextModel();
       const targetModels = allTextModels.filter(
-        model => model.modelName === textModel.modelName
+        model => model.modelName === textModel.modelName,
       );
       if (targetModels && targetModels.length === 1) {
         setSelectedTextModel(targetModels[0]);
@@ -240,7 +249,7 @@ function SettingsScreen(): React.JSX.Element {
         updateTextModelUsageOrder(targetModels[0]);
       } else {
         const defaultMissMatchModel = allTextModels.filter(
-          model => model.modelName === 'Claude 3 Sonnet'
+          model => model.modelName === 'Claude 3 Sonnet',
         );
         if (defaultMissMatchModel && defaultMissMatchModel.length === 1) {
           setSelectedTextModel(defaultMissMatchModel[0]);
@@ -257,7 +266,7 @@ function SettingsScreen(): React.JSX.Element {
         });
       }
     },
-    [textModels, imageModels]
+    [textModels, imageModels],
   );
 
   const fetchAndSetModelNamesRef = useRef(fetchAndSetModelNames);
@@ -399,7 +408,7 @@ function SettingsScreen(): React.JSX.Element {
     value: model.modelId ?? '',
   }));
   const imageSizesData: DropdownItem[] = getAllImageSize(
-    selectedImageModel
+    selectedImageModel,
   ).map(size => ({
     label: size,
     value: size,
@@ -605,7 +614,7 @@ function SettingsScreen(): React.JSX.Element {
           onChange={(item: DropdownItem) => {
             if (item.value !== '') {
               const selectedModel = textModels.find(
-                model => model.modelId === item.value
+                model => model.modelId === item.value,
               );
               if (selectedModel) {
                 saveTextModel(selectedModel);
@@ -653,7 +662,7 @@ function SettingsScreen(): React.JSX.Element {
             if (item.value !== '') {
               setSelectedImageModel(item.value);
               const selectedModel = imageModels.find(
-                model => model.modelId === item.value
+                model => model.modelId === item.value,
               );
               if (selectedModel) {
                 saveImageModel(selectedModel);
@@ -688,6 +697,44 @@ function SettingsScreen(): React.JSX.Element {
             }}
           />
         </View>
+
+        <Text style={styles.sectionTitle}>⚙️ Tool Settings</Text>
+
+        <CustomTextInput
+          label="Tool Timeout (seconds)"
+          value={String(toolTimeout)}
+          onChangeText={text => {
+            const num = parseInt(text) || 60;
+            setToolTimeout(num);
+            saveToolTimeout(num);
+          }}
+          keyboardType="numeric"
+          placeholder="60"
+        />
+
+        <CustomTextInput
+          label="Cache TTL (seconds)"
+          value={String(toolCacheTTL)}
+          onChangeText={text => {
+            const num = parseInt(text) || 3600;
+            setToolCacheTTL(num);
+            saveToolCacheTTL(num);
+          }}
+          keyboardType="numeric"
+          placeholder="3600"
+        />
+
+        <CustomTextInput
+          label="Max Retries"
+          value={String(toolMaxRetries)}
+          onChangeText={text => {
+            const num = parseInt(text) || 3;
+            setToolMaxRetries(num);
+            saveToolMaxRetries(num);
+          }}
+          keyboardType="numeric"
+          placeholder="3"
+        />
 
         {getMCPEnabled() && (
           <View style={styles.toolsStatusCard}>
@@ -763,7 +810,7 @@ function SettingsScreen(): React.JSX.Element {
           style={styles.itemContainer}
           onPress={() =>
             Linking.openURL(
-              GITHUB_LINK + '/issues/new?template=bug_report.yaml'
+              GITHUB_LINK + '/issues/new?template=bug_report.yaml',
             )
           }>
           <Text style={styles.label}>Report an Issue</Text>
@@ -781,7 +828,7 @@ function SettingsScreen(): React.JSX.Element {
           onPress={() => {
             if (Platform.OS === 'web') {
               const confirmed = window.confirm(
-                'Are you sure you want to delete all conversations? This action cannot be undone.'
+                'Are you sure you want to delete all conversations? This action cannot be undone.',
               );
               if (confirmed) {
                 deleteAllMessages();
@@ -800,11 +847,11 @@ function SettingsScreen(): React.JSX.Element {
                       deleteAllMessages();
                       Alert.alert(
                         'Success',
-                        'All conversations have been deleted.'
+                        'All conversations have been deleted.',
                       );
                     },
                   },
-                ]
+                ],
               );
             }
           }}>

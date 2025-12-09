@@ -15,6 +15,7 @@ import {
   getApiUrl,
   getBedrockApiKey,
   getBedrockConfigMode,
+  getDebugEnabled,
   getDeepSeekApiKey,
   getImageModel,
   getImageSize,
@@ -43,7 +44,7 @@ type CallbackFunction = (
   complete: boolean,
   needStop: boolean,
   usage?: Usage,
-  reasoning?: string
+  reasoning?: string,
 ) => void;
 export const isDev = false;
 export const invokeBedrockWithCallBack = async (
@@ -53,7 +54,7 @@ export const invokeBedrockWithCallBack = async (
   shouldStop: () => boolean,
   controller: AbortController,
   callback: CallbackFunction,
-  toolCallDepth: number = 0
+  toolCallDepth: number = 0,
 ) => {
   // Prevent infinite tool calling loops
   const MAX_TOOL_DEPTH = 5;
@@ -62,7 +63,7 @@ export const invokeBedrockWithCallBack = async (
     callback(
       'Maximum tool call depth reached. Please try a simpler request.',
       true,
-      false
+      false,
     );
     return;
   }
@@ -93,7 +94,7 @@ export const invokeBedrockWithCallBack = async (
         prompt,
         shouldStop,
         controller,
-        callback
+        callback,
       );
     } else {
       await invokeOpenAIWithCallBack(
@@ -101,7 +102,7 @@ export const invokeBedrockWithCallBack = async (
         prompt,
         shouldStop,
         controller,
-        callback
+        callback,
       );
     }
     return;
@@ -119,7 +120,7 @@ export const invokeBedrockWithCallBack = async (
         prompt,
         shouldStop,
         controller,
-        callback
+        callback,
       );
       return;
     }
@@ -127,7 +128,7 @@ export const invokeBedrockWithCallBack = async (
       callback(
         'Please configure your SwiftChat Server API URL and API Key',
         true,
-        false
+        false,
       );
       return;
     }
@@ -156,11 +157,11 @@ export const invokeBedrockWithCallBack = async (
     const url = getApiPrefix() + '/converse/v3';
     let completeMessage = '';
     let completeReasoning = '';
-    let collectedToolUse: {
+    let collectedToolUses: Array<{
       name: string;
       input?: Record<string, unknown>;
       toolUseId: string;
-    } | null = null;
+    }> = [];
     const timeoutId = setTimeout(() => controller.abort(), 60000);
     fetch(url!, options)
       .then(response => {
@@ -198,85 +199,121 @@ export const invokeBedrockWithCallBack = async (
                   if (bedrockChunk.toolUse) {
                     console.log(
                       '[Bedrock] Tool use requested:',
-                      bedrockChunk.toolUse
+                      bedrockChunk.toolUse,
                     );
-                    collectedToolUse = bedrockChunk.toolUse;
+                    collectedToolUses.push(bedrockChunk.toolUse);
                   }
 
                   // Handle tool execution when stop reason is tool_use
                   if (
                     bedrockChunk.stopReason === 'tool_use' &&
-                    collectedToolUse
+                    collectedToolUses.length > 0
                   ) {
                     console.log(
-                      '[Bedrock] Executing tool:',
-                      collectedToolUse.name
+                      `[Bedrock] Executing ${collectedToolUses.length} tool(s)`,
                     );
 
                     // Show tool execution feedback
+                    const toolNames = collectedToolUses
+                      .map(t => t.name)
+                      .join(', ');
                     callback(
                       completeMessage +
-                        `\n\n🔧 正在使用 ${collectedToolUse.name} 工具...`,
+                        `\n\n🔧 **正在调用 ${collectedToolUses.length} 个工具**\n` +
+                        `工具: ${toolNames}`,
                       false,
                       false,
                       undefined,
-                      completeReasoning
+                      completeReasoning,
                     );
 
                     try {
-                      // Import MCPService dynamically
                       const { callMCPTool } = await import('../mcp/MCPService');
+                      const startTime = Date.now();
 
-                      // Execute the tool with timeout
-                      const toolPromise = callMCPTool(
-                        collectedToolUse.name,
-                        collectedToolUse.input || {}
+                      // 并发执行所有工具
+                      const toolPromises = collectedToolUses.map(
+                        async toolUse => {
+                          try {
+                            const result = await Promise.race([
+                              callMCPTool(
+                                toolUse.name,
+                                toolUse.input || {},
+                                getDebugEnabled(),
+                              ),
+                              new Promise((_, reject) =>
+                                setTimeout(
+                                  () => reject(new Error('Tool timeout')),
+                                  30000,
+                                ),
+                              ),
+                            ]);
+                            return { toolUse, result, success: true };
+                          } catch (error) {
+                            return {
+                              toolUse,
+                              error: String(error),
+                              success: false,
+                            };
+                          }
+                        },
                       );
-                      const timeoutPromise = new Promise((_, reject) =>
-                        setTimeout(
-                          () => reject(new Error('Tool timeout')),
-                          30000
-                        )
+
+                      const toolResults = await Promise.all(toolPromises);
+                      const executionTime = (
+                        (Date.now() - startTime) /
+                        1000
+                      ).toFixed(2);
+
+                      console.log('[Bedrock] Tool results:', toolResults);
+                      console.log(
+                        `[Bedrock] Total execution time: ${executionTime}s`,
                       );
 
-                      const toolResult = await Promise.race([
-                        toolPromise,
-                        timeoutPromise,
-                      ]);
+                      // Show completion feedback
+                      const successCount = toolResults.filter(
+                        r => r.success,
+                      ).length;
+                      callback(
+                        completeMessage +
+                          `\n\n✅ **工具执行完成** (${executionTime}s)\n` +
+                          `成功: ${successCount}/${toolResults.length}\n` +
+                          `正在处理结果...`,
+                        false,
+                        false,
+                        undefined,
+                        completeReasoning,
+                      );
 
-                      console.log('[Bedrock] Tool result:', toolResult);
-
-                      // Truncate large results
-                      let resultText = JSON.stringify(toolResult);
-                      if (resultText.length > 10000) {
-                        resultText =
-                          resultText.substring(0, 10000) + '...[truncated]';
-                        console.log(
-                          '[Bedrock] Result truncated to 10000 chars'
-                        );
-                      }
-
-                      // Add assistant message with toolUse
+                      // Add assistant message with all toolUses
                       messages.push({
                         role: 'assistant',
-                        content: [
-                          {
-                            toolUse: collectedToolUse,
-                          },
-                        ],
+                        content: collectedToolUses.map(toolUse => ({
+                          toolUse,
+                        })),
                       });
 
-                      // Add user message with toolResult
+                      // Add user message with all toolResults
                       messages.push({
                         role: 'user',
-                        content: [
-                          {
+                        content: toolResults.map(tr => {
+                          let resultText = tr.success
+                            ? JSON.stringify(tr.result)
+                            : `Error: ${tr.error}`;
+
+                          if (resultText.length > 10000) {
+                            resultText =
+                              resultText.substring(0, 10000) + '...[truncated]';
+                          }
+
+                          return {
                             toolResult: {
-                              toolUseId: collectedToolUse.toolUseId,
+                              toolUseId: tr.toolUse.toolUseId,
                               content: [{ text: resultText }],
+                              status: tr.success ? 'success' : 'error',
                             },
-                          },
-                        ],
+                          };
+                        }),
                       });
 
                       // Continue conversation with tool result
@@ -287,13 +324,13 @@ export const invokeBedrockWithCallBack = async (
                         shouldStop,
                         controller,
                         callback,
-                        toolCallDepth + 1
+                        toolCallDepth + 1,
                       );
                       return;
                     } catch (toolError) {
                       console.error(
                         '[Bedrock] Tool execution error:',
-                        toolError
+                        toolError,
                       );
                       callback(
                         completeMessage +
@@ -303,7 +340,7 @@ export const invokeBedrockWithCallBack = async (
                         true,
                         false,
                         undefined,
-                        completeReasoning
+                        completeReasoning,
                       );
                       return;
                     }
@@ -316,7 +353,7 @@ export const invokeBedrockWithCallBack = async (
                       false,
                       false,
                       undefined,
-                      completeReasoning
+                      completeReasoning,
                     );
                   }
                   if (bedrockChunk.text) {
@@ -330,7 +367,7 @@ export const invokeBedrockWithCallBack = async (
                       false,
                       false,
                       undefined,
-                      completeReasoning
+                      completeReasoning,
                     );
                   }
                   if (bedrockChunk.usage) {
@@ -340,7 +377,7 @@ export const invokeBedrockWithCallBack = async (
                       false,
                       false,
                       bedrockChunk.usage,
-                      completeReasoning
+                      completeReasoning,
                     );
                   }
                 }
@@ -352,7 +389,7 @@ export const invokeBedrockWithCallBack = async (
                 true,
                 false,
                 undefined,
-                completeReasoning
+                completeReasoning,
               );
               return;
             }
@@ -406,7 +443,7 @@ export const invokeBedrockWithCallBack = async (
         imagePrompt,
         controller,
         image,
-        garmentImage
+        garmentImage,
       );
     } else {
       const images =
@@ -539,7 +576,7 @@ export const requestToken = async (): Promise<TokenResponse | null> => {
 
 export const requestUpgradeInfo = async (
   os: string,
-  version: string
+  version: string,
 ): Promise<UpgradeInfo> => {
   const url = getApiPrefix() + '/upgrade';
   const options = {
@@ -568,7 +605,7 @@ export const requestUpgradeInfo = async (
 export const genImage = async (
   imagePrompt: string,
   controller: AbortController,
-  images?: ImageInfo[]
+  images?: ImageInfo[],
 ): Promise<ImageRes> => {
   if (!isConfigured()) {
     return {
@@ -607,7 +644,7 @@ export const genImage = async (
     if (!response.ok) {
       const responseJson = await response.json();
       const errMsg = responseJson.detail.includes(
-        "You don't have access to the model"
+        "You don't have access to the model",
       )
         ? responseJson.detail +
           ' Please enable your `Nova Lite` model in the US region to support generating images with Chinese prompts.'

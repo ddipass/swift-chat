@@ -92,11 +92,12 @@ export function refreshMCPTools() {
 
 export async function callMCPTool(
   name: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  debug: boolean = false,
 ): Promise<unknown> {
   // Check if it's a built-in tool
   if (isBuiltInTool(name)) {
-    return await executeBuiltInTool(name, args);
+    return await executeBuiltInTool(name, args, debug);
   }
 
   // Try calling the tool on all enabled MCP servers
@@ -108,7 +109,19 @@ export async function callMCPTool(
   let lastError: Error | null = null;
   for (const client of clients) {
     try {
-      return await client.callTool(name, args);
+      const result = await client.callTool(name, args);
+
+      // 如果开启debug，打印调用信息
+      if (debug) {
+        console.log('[MCP Tool Debug]', {
+          tool: name,
+          args,
+          result,
+          client: client.constructor.name,
+        });
+      }
+
+      return result;
     } catch (error) {
       lastError = error as Error;
       // Continue to next server
@@ -130,8 +143,8 @@ export function formatToolsForPrompt(tools: MCPTool[]): string {
     .map(
       tool =>
         `- ${tool.name}: ${tool.description}\n  Input: ${JSON.stringify(
-          tool.inputSchema
-        )}`
+          tool.inputSchema,
+        )}`,
     )
     .join('\n');
 
@@ -187,10 +200,11 @@ export async function addToolsToMessage(message: string): Promise<string> {
  */
 export async function executeToolCall(
   toolName: string,
-  toolArgs: Record<string, unknown>
+  toolArgs: Record<string, unknown>,
+  debug: boolean = false,
 ): Promise<{ success: boolean; data?: string; error?: string }> {
   try {
-    const result = await callMCPTool(toolName, toolArgs);
+    const result = await callMCPTool(toolName, toolArgs, debug);
     return {
       success: true,
       data: `Tool "${toolName}" result:\n${JSON.stringify(result, null, 2)}`,
