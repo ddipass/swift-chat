@@ -8,6 +8,17 @@ export type RouteParamList = {
   };
   Settings: NonNullable<unknown>;
   TokenUsage: NonNullable<unknown>;
+  ToolsSettings: NonNullable<unknown>;
+  MCPServers: NonNullable<unknown>;
+  MCPServerConfig: {
+    preset: any;
+    onSave: (config: any) => void;
+  };
+  MCPServerTools: {
+    serverId: string;
+    serverName: string;
+    tools: any[];
+  };
   Prompt: {
     prompt?: SystemPrompt;
     promptType?: string | undefined;

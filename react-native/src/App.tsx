@@ -13,6 +13,10 @@ import { AppProvider, useAppContext } from './history/AppProvider.tsx';
 import SettingsScreen from './settings/SettingsScreen.tsx';
 import Toast from 'react-native-toast-message';
 import TokenUsageScreen from './settings/TokenUsageScreen.tsx';
+import ToolsSettingsScreen from './settings/ToolsSettingsScreen.tsx';
+import MCPServersScreen from './settings/MCPServersScreen.tsx';
+import MCPServerConfigScreen from './settings/MCPServerConfigScreen.tsx';
+import MCPServerToolsScreen from './settings/MCPServerToolsScreen.tsx';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import PromptScreen from './prompt/PromptScreen.tsx';
 import { isAndroid, isMacCatalyst } from './utils/PlatformUtils';
@@ -90,6 +94,62 @@ const AppNavigator = () => {
         component={PromptScreen}
         options={{
           title: 'System Prompt',
+          contentStyle: {
+            height: isMac ? 66 : undefined,
+            backgroundColor: colors.background,
+          },
+          headerTitleAlign: 'center',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+        }}
+      />
+      <Stack.Screen
+        name="ToolsSettings"
+        component={ToolsSettingsScreen}
+        options={{
+          title: 'Tools',
+          contentStyle: {
+            height: isMac ? 66 : undefined,
+            backgroundColor: colors.background,
+          },
+          headerTitleAlign: 'center',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+        }}
+      />
+      <Stack.Screen
+        name="MCPServers"
+        component={MCPServersScreen}
+        options={{
+          title: 'MCP Servers',
+          contentStyle: {
+            height: isMac ? 66 : undefined,
+            backgroundColor: colors.background,
+          },
+          headerTitleAlign: 'center',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+        }}
+      />
+      <Stack.Screen
+        name="MCPServerConfig"
+        component={MCPServerConfigScreen}
+        options={{
+          title: 'Configure MCP Server',
+          contentStyle: {
+            height: isMac ? 66 : undefined,
+            backgroundColor: colors.background,
+          },
+          headerTitleAlign: 'center',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+        }}
+      />
+      <Stack.Screen
+        name="MCPServerTools"
+        component={MCPServerToolsScreen}
+        options={{
+          title: 'MCP Tools',
           contentStyle: {
             height: isMac ? 66 : undefined,
             backgroundColor: colors.background,

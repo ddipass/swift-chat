@@ -243,6 +243,38 @@ const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
         />
         <Text style={styles.settingsText}>Settings</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.settingsTouch}
+        onPress={() => {
+          setDrawerToPermanent();
+          navigation.navigate('ToolsSettings');
+        }}>
+        <Image
+          source={
+            isDark
+              ? require('../assets/settings_dark.png')
+              : require('../assets/settings.png')
+          }
+          style={styles.settingsLeftImg}
+        />
+        <Text style={styles.settingsText}>Tools</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.settingsTouch}
+        onPress={() => {
+          setDrawerToPermanent();
+          navigation.navigate('MCPServers');
+        }}>
+        <Image
+          source={
+            isDark
+              ? require('../assets/settings_dark.png')
+              : require('../assets/settings.png')
+          }
+          style={styles.settingsLeftImg}
+        />
+        <Text style={styles.settingsText}>MCP Servers</Text>
+      </TouchableOpacity>
       <Dialog.Container visible={showDialog}>
         <Dialog.Title>Delete Message</Dialog.Title>
         <Dialog.Description>You cannot undo this action.</Dialog.Description>

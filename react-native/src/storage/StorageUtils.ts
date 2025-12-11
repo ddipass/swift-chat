@@ -76,6 +76,21 @@ const bedrockConfigModeKey = keyPrefix + 'bedrockConfigModeKey';
 const bedrockApiKeyTag = keyPrefix + 'bedrockApiKeyTag';
 const lastVirtualTryOnImgFileTag = keyPrefix + 'lastVirtualTryOnImgFileTag';
 
+// Tools configuration keys
+const toolsApiUrlKey = keyPrefix + 'toolsApiUrlKey';
+const toolsApiKeyTag = keyPrefix + 'toolsApiKeyTag';
+const webFetchModeKey = keyPrefix + 'webFetchModeKey';
+const webFetchSummaryModelKey = keyPrefix + 'webFetchSummaryModelKey';
+const webFetchSummaryPromptKey = keyPrefix + 'webFetchSummaryPromptKey';
+const webFetchRegexRemoveElementsKey =
+  keyPrefix + 'webFetchRegexRemoveElementsKey';
+const toolTimeoutKey = keyPrefix + 'toolTimeoutKey';
+const toolCacheTTLKey = keyPrefix + 'toolCacheTTLKey';
+const toolMaxRetriesKey = keyPrefix + 'toolMaxRetriesKey';
+const toolDebugEnabledKey = keyPrefix + 'toolDebugEnabledKey';
+const toolMaxContentLengthKey = keyPrefix + 'toolMaxContentLengthKey';
+const toolFollowRedirectsKey = keyPrefix + 'toolFollowRedirectsKey';
+
 let currentApiUrl: string | undefined;
 let currentApiKey: string | undefined;
 let currentOllamaApiUrl: string | undefined;
@@ -812,4 +827,115 @@ export function generateOpenAICompatModels(
   });
 
   return openAICompatModelList;
+}
+
+// ============================================
+// Tools Configuration
+// ============================================
+
+export function getToolsApiUrl(): string {
+  return storage.getString(toolsApiUrlKey) ?? '';
+}
+
+export function saveToolsApiUrl(url: string) {
+  storage.set(toolsApiUrlKey, url);
+}
+
+export function getToolsApiKey(): string {
+  return encryptStorage.getString(toolsApiKeyTag) ?? '';
+}
+
+export function saveToolsApiKey(key: string) {
+  encryptStorage.set(toolsApiKeyTag, key);
+}
+
+export function getWebFetchMode(): 'regex' | 'ai_summary' {
+  return (
+    (storage.getString(webFetchModeKey) as 'regex' | 'ai_summary') ?? 'regex'
+  );
+}
+
+export function saveWebFetchMode(mode: 'regex' | 'ai_summary') {
+  storage.set(webFetchModeKey, mode);
+}
+
+export function getWebFetchSummaryModel(): string {
+  return (
+    storage.getString(webFetchSummaryModelKey) ??
+    'anthropic.claude-3-5-sonnet-20241022-v2:0'
+  );
+}
+
+export function saveWebFetchSummaryModel(modelId: string) {
+  storage.set(webFetchSummaryModelKey, modelId);
+}
+
+export function getWebFetchSummaryPrompt(): string {
+  return (
+    storage.getString(webFetchSummaryPromptKey) ??
+    'Please summarize the following web page content. Focus on the main topics, key information, and important details. Keep it concise but comprehensive.'
+  );
+}
+
+export function saveWebFetchSummaryPrompt(prompt: string) {
+  storage.set(webFetchSummaryPromptKey, prompt);
+}
+
+export function getWebFetchRegexRemoveElements(): string {
+  return (
+    storage.getString(webFetchRegexRemoveElementsKey) ??
+    'script,style,nav,footer,header,aside,iframe,noscript'
+  );
+}
+
+export function saveWebFetchRegexRemoveElements(elements: string) {
+  storage.set(webFetchRegexRemoveElementsKey, elements);
+}
+
+export function getToolTimeout(): number {
+  return storage.getNumber(toolTimeoutKey) ?? 60;
+}
+
+export function saveToolTimeout(timeout: number) {
+  storage.set(toolTimeoutKey, timeout);
+}
+
+export function getToolCacheTTL(): number {
+  return storage.getNumber(toolCacheTTLKey) ?? 3600;
+}
+
+export function saveToolCacheTTL(ttl: number) {
+  storage.set(toolCacheTTLKey, ttl);
+}
+
+export function getToolMaxRetries(): number {
+  return storage.getNumber(toolMaxRetriesKey) ?? 3;
+}
+
+export function saveToolMaxRetries(retries: number) {
+  storage.set(toolMaxRetriesKey, retries);
+}
+
+export function getToolDebugEnabled(): boolean {
+  return storage.getBoolean(toolDebugEnabledKey) ?? false;
+}
+
+export function saveToolDebugEnabled(enabled: boolean) {
+  storage.set(toolDebugEnabledKey, enabled);
+}
+
+export function getToolMaxContentLength(): number {
+  return storage.getNumber(toolMaxContentLengthKey) ?? 50000;
+}
+
+export function saveToolMaxContentLength(length: number) {
+  storage.set(toolMaxContentLengthKey, length);
+}
+
+export function getToolFollowRedirects(): boolean {
+  return storage.getBoolean(toolFollowRedirectsKey) ?? true;
+}
+
+export function saveToolFollowRedirects(follow: boolean) {
+  storage.set(toolFollowRedirectsKey, follow);
 }

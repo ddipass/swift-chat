@@ -689,6 +689,7 @@ function SettingsScreen(): React.JSX.Element {
             />
           </View>
         </TouchableOpacity>
+
         {!isMac && (
           <View style={styles.switchContainer}>
             <Text style={styles.label}>Haptic Feedback</Text>

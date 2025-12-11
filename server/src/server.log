@@ -1,0 +1,24 @@
+INFO:     Started server process [37937]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+Starting webserver...
+✅ API Key initialized
+INFO:     127.0.0.1:58806 - "GET / HTTP/1.1" 200 OK
+2025-12-10 14:46:03,903 - mcp_integration.manager - INFO - Adding MCP server 'Test Rename' (id: a98fc887)
+2025-12-10 14:46:03,903 - mcp_integration.manager - INFO - Background connection started for a98fc887
+Adding MCP server: {'name': 'Test Rename', 'command': 'uvx', 'args': ['awslabs.core-mcp-server@latest'], 'env': {}, 'oauth': None, 'callback_base_url': ''}
+Result: {'server_id': 'a98fc887', 'status': 'connecting'}
+INFO:     127.0.0.1:58830 - "POST /api/mcp/servers HTTP/1.1" 200 OK
+2025-12-10 14:46:03,904 - mcp_integration.manager - INFO - Background connecting server a98fc887
+2025-12-10 14:46:03,904 - mcp_integration.manager - INFO - Starting MCP server a98fc887: Test Rename
+2025-12-10 14:46:03,904 - mcp_integration.stdio_client - INFO - Starting MCP server: uvx awslabs.core-mcp-server@latest
+2025-12-10 14:46:03,914 - mcp_integration.stdio_client - INFO - MCP server started
+INFO:     127.0.0.1:58858 - "GET /api/mcp/servers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58947 - "GET /api/mcp/servers HTTP/1.1" 200 OK
+2025-12-10 14:46:46,441 - mcp_integration.manager - INFO - Server a98fc887 started with 1 tools
+2025-12-10 14:46:46,441 - mcp_integration.manager - INFO - Server a98fc887 connected successfully
+INFO:     127.0.0.1:58993 - "GET /api/mcp/servers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49910 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49974 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50027 - "POST /api/mcp/servers HTTP/1.1" 401 Unauthorized

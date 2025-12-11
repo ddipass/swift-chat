@@ -1,8 +1,9 @@
 import base64
+import logging
 from typing import List
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, Request as FastAPIRequest
-from fastapi.responses import StreamingResponse, PlainTextResponse
+from fastapi.responses import StreamingResponse, PlainTextResponse, HTMLResponse
 import boto3
 import json
 import random
@@ -15,9 +16,26 @@ from urllib.request import urlopen, Request
 import time
 from image_nl_processor import get_native_request_with_ref_image, get_analyse_result, get_native_request_with_virtual_try_on
 import httpx
+from tool_manager import ToolManager
+from mcp_integration.manager import MCPManager
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 security = HTTPBearer()
+mcp_manager = MCPManager()
+tool_manager = ToolManager()
+tool_manager.mcp_manager = mcp_manager  # 使用共享的 mcp_manager
+
+@app.get("/")
+async def root():
+    """Health check endpoint"""
+    return {"status": "ok", "service": "SwiftChat API"}
 
 auth_token = ''
 CACHE_DURATION = 120000
@@ -72,8 +90,18 @@ def get_api_key_from_ssm(use_cache_token: bool):
     global auth_token
     if use_cache_token and auth_token != '':
         return auth_token
+    
+    # For local testing
+    if os.environ.get('LOCAL_API_KEY'):
+        auth_token = os.environ.get('LOCAL_API_KEY')
+        return auth_token
+    
+    # Check if API_KEY_NAME is set
+    api_key_name = os.environ.get('API_KEY_NAME')
+    if not api_key_name:
+        raise HTTPException(status_code=500, detail="API_KEY_NAME environment variable not set")
+    
     ssm_client = boto3.client('ssm')
-    api_key_name = os.environ['API_KEY_NAME']
     try:
         response = ssm_client.get_parameter(
             Name=api_key_name,
@@ -415,6 +443,271 @@ def contains_chinese(text):
     return match is not None
 
 
+# ============================================
+# Tools API
+# ============================================
+
+class ToolExecuteRequest(BaseModel):
+    name: str
+    arguments: dict
+    config: dict | None = None
+
+
+@app.post("/api/tool/exec")
+async def execute_tool(
+    request: ToolExecuteRequest,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """执行工具"""
+    api_key = get_api_key_from_ssm(True)
+    if credentials.credentials != api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    try:
+        result = await tool_manager.execute_tool(
+            name=request.name,
+            arguments=request.arguments,
+            config=request.config or {}
+        )
+        
+        return {
+            "success": True,
+            "result": result
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/api/tools/stats")
+async def get_tool_stats(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """获取工具统计"""
+    api_key = get_api_key_from_ssm(True)
+    if credentials.credentials != api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    return tool_manager.get_stats()
+
+
+@app.get("/api/tools/list")
+async def list_tools(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """获取工具列表（内置 + MCP）"""
+    api_key = get_api_key_from_ssm(True)
+    if credentials.credentials != api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    # 内置工具
+    tools = [
+        {
+            "name": "web_fetch",
+            "description": "Fetch and extract content from a web URL. Returns the main text content of the page.",
+            "parameters": {
+                "url": "string (required) - The URL to fetch content from"
+            }
+        }
+    ]
+    
+    # MCP 工具
+    for server_id, server in mcp_manager.servers.items():
+        if server["status"] == "active":
+            for tool in server.get("tools", []):
+                tools.append({
+                    "name": f"mcp:{server_id}:{tool['name']}",
+                    "description": f"[{server['config']['name']}] {tool.get('description', '')}",
+                    "parameters": tool.get("inputSchema", {})
+                })
+    
+    return {"tools": tools}
+
+
+
+# ============================================
+# MCP API
+# ============================================
+
+class MCPServerConfig(BaseModel):
+    name: str
+    command: str
+    args: List[str] = []
+    env: dict = {}
+    oauth: dict | None = None
+    callback_base_url: str = ""
+
+
+@app.post("/api/mcp/servers")
+async def add_mcp_server(
+    request: MCPServerConfig,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """添加 MCP 服务器"""
+    api_key = get_api_key_from_ssm(True)
+    if credentials.credentials != api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    try:
+        config = request.model_dump()
+        print(f"Adding MCP server: {config}")
+        result = await mcp_manager.add_server(config)
+        print(f"Result: {result}")
+        return result
+    except Exception as e:
+        print(f"Error adding MCP server: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/mcp/servers")
+async def list_mcp_servers(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """列出所有 MCP 服务器"""
+    api_key = get_api_key_from_ssm(True)
+    if credentials.credentials != api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    return {"servers": mcp_manager.list_servers()}
+
+
+@app.delete("/api/mcp/servers/{server_id}")
+async def remove_mcp_server(
+    server_id: str,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """删除 MCP 服务器"""
+    api_key = get_api_key_from_ssm(True)
+    if credentials.credentials != api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    try:
+        await mcp_manager.remove_server(server_id)
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/mcp/servers/{server_id}/tools")
+async def get_mcp_server_tools(
+    server_id: str,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """获取服务器的工具列表"""
+    api_key = get_api_key_from_ssm(True)
+    if credentials.credentials != api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    try:
+        tools = mcp_manager.get_server_tools(server_id)
+        return {"tools": tools}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/mcp/servers/{server_id}/status")
+async def get_mcp_server_status(
+    server_id: str,
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]
+):
+    """获取服务器状态"""
+    api_key = get_api_key_from_ssm(True)
+    if credentials.credentials != api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    try:
+        status = mcp_manager.get_server_status(server_id)
+        return status
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/mcp/oauth/callback")
+async def mcp_oauth_callback(code: str, state: str):
+    """OAuth 回调端点 - 支持传统 OAuth 和 MCP OAuth"""
+    print(f"=== CALLBACK RECEIVED: code={code[:20]}..., state={state}")
+    logger.info(f"=== CALLBACK RECEIVED: code={code[:20]}..., state={state}")
+    try:
+        # 先尝试 MCP OAuth 流程（检查是否有 pending_auth 的服务器）
+        print(f"=== Trying MCP OAuth for state: {state}")
+        logger.info(f"Trying MCP OAuth for state: {state}")
+        try:
+            server_id = await mcp_manager.complete_mcp_oauth(code, state)
+            oauth_type = "MCP"
+            logger.info(f"MCP OAuth successful for server: {server_id}")
+        except ValueError as e:
+            if "No pending auth server found" in str(e):
+                # 如果没找到 MCP pending_auth 服务器，尝试传统 OAuth
+                logger.info(f"No MCP server found, trying traditional OAuth")
+                server_id = await mcp_manager.oauth.handle_callback(code, state)
+                await mcp_manager.complete_oauth(server_id)
+                oauth_type = "traditional"
+            else:
+                raise
+        
+        return HTMLResponse(f"""
+            <html>
+                <head>
+                    <title>Authorization Successful</title>
+                    <style>
+                        body {{
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100vh;
+                            margin: 0;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        }}
+                        .container {{
+                            background: white;
+                            padding: 40px;
+                            border-radius: 10px;
+                            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                            text-align: center;
+                        }}
+                        h1 {{ color: #333; margin-bottom: 10px; }}
+                        p {{ color: #666; }}
+                        .checkmark {{ font-size: 60px; color: #4CAF50; }}
+                    </style>
+                    <script>
+                        setTimeout(() => window.close(), 3000);
+                    </script>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="checkmark">✓</div>
+                        <h1>Authorization Successful!</h1>
+                        <p>MCP server authorized successfully ({oauth_type} OAuth)</p>
+                        <p style="font-size: 12px; margin-top: 20px;">This window will close automatically...</p>
+                    </div>
+                </body>
+                </body>
+            </html>
+        """)
+    except Exception as e:
+        return HTMLResponse(f"""
+            <html>
+                <body>
+                    <h1>Authorization Failed</h1>
+                    <p>Error: {str(e)}</p>
+                </body>
+            </html>
+        """, status_code=400)
+
+
 if __name__ == "__main__":
     print("Starting webserver...")
+    # Initialize auth_token on startup
+    try:
+        get_api_key_from_ssm(False)
+        print(f"✅ API Key initialized")
+    except Exception as e:
+        print(f"⚠️  Warning: Could not initialize API key: {e}")
+    
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8080")))

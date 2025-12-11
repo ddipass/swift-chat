@@ -23,6 +23,19 @@ import {
   getTextModel,
   getThinkingEnabled,
   saveTokenInfo,
+  getToolsApiUrl,
+  getToolsApiKey,
+  getWebFetchMode,
+  getWebFetchSummaryModel,
+  getWebFetchSummaryPrompt,
+  getWebFetchRegexRemoveElements,
+  getToolTimeout,
+  getToolCacheTTL,
+  getToolMaxRetries,
+  getToolDebugEnabled,
+  getAccessKeyId,
+  getSecretAccessKey,
+  getSessionToken,
 } from '../storage/StorageUtils.ts';
 import { saveImageToLocal } from '../chat/util/FileUtils.ts';
 import {
@@ -37,6 +50,7 @@ import { BedrockThinkingModels } from '../storage/Constants.ts';
 import { getModelTag } from '../utils/ModelUtils.ts';
 import { invokeBedrockWithAPIKey, sleep } from './bedrock-api-key.ts';
 import { genImageWithAPIKey } from './bedrock-api-key-image.ts';
+import { ToolsClient, WebFetchConfig } from '../tools/ToolsClient.ts';
 
 type CallbackFunction = (
   result: string,
@@ -118,12 +132,19 @@ export const invokeBedrockWithCallBack = async (
       );
       return;
     }
+
+    // 获取工具系统提示词
+    const toolsPrompt = await getToolsSystemPrompt();
+    const finalSystemPrompt = prompt?.prompt
+      ? prompt.prompt + toolsPrompt
+      : toolsPrompt || undefined;
+
     const bodyObject = {
       messages: messages,
       modelId: getTextModel().modelId,
       region: getRegion(),
       enableThinking: isEnableThinking(),
-      system: prompt ? [{ text: prompt?.prompt }] : undefined,
+      system: finalSystemPrompt ? [{ text: finalSystemPrompt }] : undefined,
     };
     if (prompt?.includeHistory === false) {
       bodyObject.messages = messages.slice(-1);
@@ -214,13 +235,85 @@ export const invokeBedrockWithCallBack = async (
               }
             }
             if (done) {
-              callback(
-                completeMessage,
-                true,
-                false,
-                undefined,
-                completeReasoning
-              );
+              // 检测是否有工具调用
+              const toolCall = detectToolCall(completeMessage);
+              if (toolCall) {
+                console.log('[Tools] Detected tool call:', toolCall);
+
+                // 显示工具调用信息
+                callback(
+                  completeMessage +
+                    `\n\n🔧 Executing tool: ${toolCall.toolName}...`,
+                  false,
+                  false,
+                  undefined,
+                  completeReasoning
+                );
+
+                try {
+                  // 执行工具
+                  const startTime = Date.now();
+                  const toolResult = await executeToolCall(
+                    toolCall.toolName,
+                    toolCall.params
+                  );
+                  const executionTime = (
+                    (Date.now() - startTime) /
+                    1000
+                  ).toFixed(2);
+
+                  console.log('[Tools] Tool result:', toolResult);
+
+                  // 显示工具执行完成
+                  callback(
+                    completeMessage +
+                      `\n\n✅ Tool executed (${executionTime}s)\n\nTOOL_RESULT:\n${toolResult}\n\nProcessing result...`,
+                    false,
+                    false,
+                    undefined,
+                    completeReasoning
+                  );
+
+                  // 添加工具结果到消息历史
+                  messages.push({
+                    role: 'assistant',
+                    content: [{ text: completeMessage }],
+                  });
+                  messages.push({
+                    role: 'user',
+                    content: [{ text: `TOOL_RESULT:\n${toolResult}` }],
+                  });
+
+                  // 继续对话
+                  await invokeBedrockWithCallBack(
+                    messages,
+                    chatMode,
+                    prompt,
+                    shouldStop,
+                    controller,
+                    callback
+                  );
+                } catch (error) {
+                  console.log('[Tools] Tool execution error:', error);
+                  callback(
+                    completeMessage +
+                      `\n\n❌ Tool execution failed: ${String(error)}`,
+                    true,
+                    false,
+                    undefined,
+                    completeReasoning
+                  );
+                }
+              } else {
+                // 没有工具调用，正常完成
+                callback(
+                  completeMessage,
+                  true,
+                  false,
+                  undefined,
+                  completeReasoning
+                );
+              }
               return;
             }
           } catch (readError) {
@@ -581,4 +674,100 @@ const isThinkingModel = (): boolean => {
 
 function isConfigured(): boolean {
   return getApiPrefix().startsWith('http') && getApiKey().length > 0;
+}
+
+async function getToolsSystemPrompt(): Promise<string> {
+  const toolsApiUrl = getToolsApiUrl();
+  const toolsApiKey = getToolsApiKey();
+
+  if (!toolsApiUrl || !toolsApiKey) {
+    return '';
+  }
+
+  try {
+    const response = await fetch(`${toolsApiUrl}/api/tools/list`, {
+      headers: { Authorization: `Bearer ${toolsApiKey}` },
+    });
+
+    if (!response.ok) {
+      return '';
+    }
+
+    const data = await response.json();
+
+    return `
+
+Available Tools:
+You have access to the following tools. To use a tool, respond EXACTLY in this format:
+TOOL_CALL: tool_name
+PARAMETERS: {"param": "value"}
+
+Available tools:
+${data.tools
+  .map(
+    (t: any) => `- ${t.name}: ${t.description}\n  Parameters: ${t.parameters}`
+  )
+  .join('\n')}
+
+After I execute the tool, I will provide the result with "TOOL_RESULT:", and you should continue the conversation based on that result.
+`;
+  } catch (e) {
+    console.log('[Tools] Failed to fetch tools list:', e);
+    return '';
+  }
+}
+
+function detectToolCall(text: string): {
+  toolName: string;
+  params: Record<string, unknown>;
+} | null {
+  const match = text.match(/TOOL_CALL:\s*(\w+)\s*PARAMETERS:\s*({[^}]*})/s);
+  if (match) {
+    try {
+      return {
+        toolName: match[1],
+        params: JSON.parse(match[2]),
+      };
+    } catch (e) {
+      console.log('[Tools] Failed to parse tool parameters:', e);
+      return null;
+    }
+  }
+  return null;
+}
+
+async function executeToolCall(
+  toolName: string,
+  params: Record<string, unknown>
+): Promise<string> {
+  const toolsApiUrl = getToolsApiUrl();
+  const toolsApiKey = getToolsApiKey();
+
+  if (!toolsApiUrl || !toolsApiKey) {
+    return 'Error: Tools not configured';
+  }
+
+  try {
+    const config: WebFetchConfig = {
+      mode: getWebFetchMode(),
+      summaryModel: getWebFetchSummaryModel(),
+      summaryPrompt: getWebFetchSummaryPrompt(),
+      regexRemoveElements: getWebFetchRegexRemoveElements(),
+      timeout: getToolTimeout(),
+      cacheTTL: getToolCacheTTL(),
+      maxRetries: getToolMaxRetries(),
+      debug: getToolDebugEnabled(),
+      awsRegion: getRegion(),
+      awsAccessKeyId: getAccessKeyId(),
+      awsSecretAccessKey: getSecretAccessKey(),
+      awsSessionToken: getSessionToken(),
+    };
+
+    const client = new ToolsClient(toolsApiUrl, toolsApiKey);
+    const result = await client.executeTool(toolName, params, config);
+
+    return JSON.stringify(result, null, 2);
+  } catch (e) {
+    return `Error: ${String(e)}`;
+  }
 }
