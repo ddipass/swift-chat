@@ -46,11 +46,11 @@ jobs:
 
       - name: Build Windows app
         working-directory: react-native
-        run: npx react-native run-windows --no-launch --no-packager --no-deploy --release --arch x64
+        run: npx react-native run-windows --no-launch --no-packager --no-deploy --arch x64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: SwiftChat-Windows-x64
-          path: react-native/windows/x64/Release/SwiftChat/
+          path: react-native/windows/x64/Debug/SwiftChat/
           retention-days: 30
