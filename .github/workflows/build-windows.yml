@@ -32,6 +32,13 @@ jobs:
         working-directory: react-native
         run: npx react-native-windows-init --overwrite --no-telemetry
 
+      - name: Update UAP version
+        working-directory: react-native
+        shell: pwsh
+        run: |
+          $manifest = "windows\SwiftChat\Package.appxmanifest"
+          (Get-Content $manifest) -replace 'TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.16299.0"', 'TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0"' | Set-Content $manifest
+
       - name: Build Windows app
         working-directory: react-native
         run: npx react-native run-windows --no-launch --no-packager --no-deploy --release --arch x64

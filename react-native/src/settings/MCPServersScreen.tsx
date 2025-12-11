@@ -446,8 +446,8 @@ const MCPServersScreen = () => {
                   style={styles.arrowImage}
                   source={
                     isDark
-                      ? require('../assets/arrow_dark.png')
-                      : require('../assets/arrow.png')
+                      ? require('../assets/back_dark.png')
+                      : require('../assets/back.png')
                   }
                 />
               </TouchableOpacity>
@@ -481,8 +481,8 @@ const MCPServersScreen = () => {
                     style={styles.arrowImage}
                     source={
                       isDark
-                        ? require('../assets/arrow_dark.png')
-                        : require('../assets/arrow.png')
+                        ? require('../assets/back_dark.png')
+                        : require('../assets/back.png')
                     }
                   />
                 </TouchableOpacity>
