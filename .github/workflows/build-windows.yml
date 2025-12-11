@@ -1,0 +1,44 @@
+name: Build for Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: react-native/package-lock.json
+
+      - name: Install dependencies
+        working-directory: react-native
+        run: npm ci
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install React Native Windows
+        working-directory: react-native
+        run: npx react-native-windows-init --overwrite --no-telemetry
+
+      - name: Build Windows app
+        working-directory: react-native
+        run: npx react-native run-windows --no-launch --no-packager --no-deploy --release --arch x64
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftChat-Windows-x64
+          path: react-native/windows/x64/Release/SwiftChat/
+          retention-days: 30
