@@ -32,6 +32,22 @@ jobs:
         working-directory: react-native
         run: npx react-native-windows-init --overwrite --no-telemetry
 
+      - name: Configure NuGet sources
+        working-directory: react-native
+        shell: pwsh
+        run: |
+          $nugetConfig = @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+            </packageSources>
+          </configuration>
+          "@
+          $nugetConfig | Out-File -FilePath "windows\NuGet.Config" -Encoding utf8
+          Write-Host "Created NuGet.Config with public sources"
+
       - name: Update UAP version
         working-directory: react-native
         shell: pwsh
