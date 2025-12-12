@@ -1,14 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:flutter_highlight/themes/github.dart';
-import 'package:flutter_highlight/themes/github-dark.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/message.dart';
 import '../models/conversation.dart';
+import '../widgets/markdown_viewer.dart';
 import 'package:uuid/uuid.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -75,7 +73,6 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
-    // Create new conversation if needed
     if (chatProvider.currentConversation == null) {
       final conversation = Conversation(
         id: _uuid.v4(),
@@ -88,7 +85,6 @@ class _ChatScreenState extends State<ChatScreen> {
       chatProvider.setCurrentConversation(conversation);
     }
 
-    // Build message contents
     final contents = <MessageContent>[];
     if (_attachments.isNotEmpty) {
       contents.addAll(_attachments);
@@ -97,7 +93,6 @@ class _ChatScreenState extends State<ChatScreen> {
       contents.add(MessageContent(type: 'text', text: text));
     }
 
-    // Add user message
     final userMessage = Message(
       id: _uuid.v4(),
       role: 'user',
@@ -140,14 +135,26 @@ class _ChatScreenState extends State<ChatScreen> {
               if (chat.models.isEmpty) return const SizedBox();
               return PopupMenuButton<String>(
                 icon: const Icon(Icons.model_training),
+                tooltip: 'Select Model',
                 onSelected: (modelId) {
                   chat.setSelectedModel(modelId);
                 },
                 itemBuilder: (context) {
                   return chat.models.map((model) {
+                    final isSelected = model['model_id'] == chat.selectedModelId;
                     return PopupMenuItem<String>(
                       value: model['model_id'],
-                      child: Text(model['model_name'] ?? model['model_id']),
+                      child: Row(
+                        children: [
+                          if (isSelected)
+                            const Icon(Icons.check, size: 16),
+                          if (isSelected)
+                            const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(model['model_name'] ?? model['model_id']),
+                          ),
+                        ],
+                      ),
                     );
                   }).toList();
                 },
@@ -156,6 +163,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.add),
+            tooltip: 'New Chat',
             onPressed: () {
               context.read<ChatProvider>().setCurrentConversation(null);
             },
@@ -204,6 +212,13 @@ class _ChatScreenState extends State<ChatScreen> {
                         Text(
                           'Start a conversation',
                           style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Supports text, images, documents, and videos',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
                         ),
                       ],
                     ),
@@ -266,6 +281,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 PopupMenuButton(
                   icon: const Icon(Icons.attach_file),
+                  tooltip: 'Attach File',
                   itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: 'image',
@@ -380,26 +396,18 @@ class _MessageBubble extends StatelessWidget {
                 }
                 return const SizedBox();
               }),
-            if (isUser)
-              Text(
-                message.content,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              )
-            else
-              MarkdownBody(
-                data: message.content,
-                styleSheet: MarkdownStyleSheet(
-                  p: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  code: TextStyle(
-                    backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
+            if (message.content.isNotEmpty)
+              isUser
+                  ? SelectableText(
+                      message.content,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    )
+                  : MarkdownViewer(
+                      data: message.content,
+                      isDark: isDark,
+                    ),
           ],
         ),
       ),
