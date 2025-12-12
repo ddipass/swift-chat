@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'services/storage_service.dart';
 import 'package:provider/provider.dart';
 import 'screens/chat_screen.dart';
 import 'screens/settings_screen.dart';
@@ -6,7 +7,9 @@ import 'screens/history_screen.dart';
 import 'providers/chat_provider.dart';
 import 'providers/settings_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await StorageService.init();
   runApp(const SwiftChatApp());
 }
 

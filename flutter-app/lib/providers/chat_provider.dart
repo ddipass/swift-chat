@@ -3,7 +3,7 @@ import '../models/message.dart';
 import '../models/conversation.dart';
 import '../models/system_prompt.dart';
 import '../services/api_service.dart';
-import '../services/database_service.dart';
+import '../services/storage_service.dart';
 import '../services/file_service.dart';
 
 class ChatProvider with ChangeNotifier {
@@ -12,7 +12,7 @@ class ChatProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   ApiService? _apiService;
-  final DatabaseService _dbService = DatabaseService();
+  final StorageService _storage = StorageService();
   final FileService _fileService = FileService();
   List<Map<String, dynamic>> _models = [];
   String? _selectedModelId;
@@ -32,7 +32,7 @@ class ChatProvider with ChangeNotifier {
   }
 
   Future<void> _loadConversations() async {
-    _conversations = await _dbService.loadConversations();
+    _conversations = await _storage.loadConversations();
     notifyListeners();
   }
 
@@ -78,7 +78,7 @@ class ChatProvider with ChangeNotifier {
 
   Future<void> addConversation(Conversation conversation) async {
     _conversations.insert(0, conversation);
-    await _dbService.saveConversation(conversation);
+    await _storage.saveConversation(conversation);
     notifyListeners();
   }
 
@@ -91,8 +91,8 @@ class ChatProvider with ChangeNotifier {
     if (_currentConversation != null) {
       _currentConversation!.messages.add(message);
       _currentConversation!.updatedAt = DateTime.now();
-      await _dbService.saveMessage(_currentConversation!.id, message);
-      await _dbService.saveConversation(_currentConversation!);
+      await _storage.saveMessage(_currentConversation!.id, message);
+      await _storage.saveConversation(_currentConversation!);
       notifyListeners();
     }
   }
@@ -107,7 +107,7 @@ class ChatProvider with ChangeNotifier {
   Future<void> saveLastMessage() async {
     if (_currentConversation != null && _currentConversation!.messages.isNotEmpty) {
       final lastMessage = _currentConversation!.messages.last;
-      await _dbService.saveMessage(_currentConversation!.id, lastMessage);
+      await _storage.saveMessage(_currentConversation!.id, lastMessage);
     }
   }
 
@@ -116,7 +116,7 @@ class ChatProvider with ChangeNotifier {
     if (_currentConversation?.id == id) {
       _currentConversation = null;
     }
-    await _dbService.deleteConversation(id);
+    await _storage.deleteConversation(id);
     notifyListeners();
   }
 
@@ -164,18 +164,18 @@ class ChatProvider with ChangeNotifier {
 
   // System Prompt methods
   Future<List<SystemPrompt>> loadSystemPrompts() async {
-    return await _dbService.loadSystemPrompts();
+    return await _storage.loadSystemPrompts();
   }
 
   Future<void> saveSystemPrompt(SystemPrompt prompt) async {
-    await _dbService.saveSystemPrompt(prompt);
+    await _storage.saveSystemPrompt(prompt);
   }
 
   Future<void> deleteSystemPrompt(String id) async {
-    await _dbService.deleteSystemPrompt(id);
+    await _storage.deleteSystemPrompt(id);
   }
 
   Future<void> updateSystemPromptOrder(List<SystemPrompt> prompts) async {
-    await _dbService.updateSystemPromptOrder(prompts);
+    await _storage.updateSystemPromptOrder(prompts);
   }
 }
