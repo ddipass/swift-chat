@@ -5,6 +5,7 @@ import 'package:flutter_highlight/themes/github.dart';
 import 'package:flutter_highlight/themes/github-dark.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'mermaid_viewer.dart';
 
 class MarkdownViewer extends StatelessWidget {
   final String data;
@@ -76,7 +77,7 @@ class MarkdownViewer extends StatelessWidget {
         ),
       ),
       builders: {
-        'code': CodeElementBuilder(isDark: isDark),
+        'mermaid': MermaidElementBuilder(),        'code': CodeElementBuilder(isDark: isDark),
         'latex': LatexElementBuilder(),
       },
       extensionSet: md.ExtensionSet(
@@ -215,5 +216,17 @@ class LatexSyntax extends md.InlineSyntax {
     final element = md.Element.text('latex', latex);
     parser.addNode(element);
     return true;
+  }
+}
+
+/// Mermaid图表渲染器
+class MermaidElementBuilder extends MarkdownElementBuilder {
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final code = element.textContent;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: MermaidViewer(code: code),
+    );
   }
 }
