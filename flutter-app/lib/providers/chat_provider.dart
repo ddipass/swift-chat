@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/message.dart';
 import '../models/conversation.dart';
+import '../models/system_prompt.dart';
 import '../services/bedrock_api_service.dart';
 import '../services/database_service.dart';
 import '../services/file_service.dart';
@@ -129,7 +130,6 @@ class ChatProvider with ChangeNotifier {
     setLoading(true);
     setError(null);
 
-    // Create assistant message
     final assistantMessage = Message(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       role: 'assistant',
@@ -151,16 +151,31 @@ class ChatProvider with ChangeNotifier {
         updateLastMessage(chunk);
       }
 
-      // Save final message
       await saveLastMessage();
     } catch (e) {
       setError('Failed to send message: $e');
-      // Remove empty assistant message on error
       if (_currentConversation!.messages.last.content.isEmpty) {
         _currentConversation!.messages.removeLast();
       }
     } finally {
       setLoading(false);
     }
+  }
+
+  // System Prompt methods
+  Future<List<SystemPrompt>> loadSystemPrompts() async {
+    return await _dbService.loadSystemPrompts();
+  }
+
+  Future<void> saveSystemPrompt(SystemPrompt prompt) async {
+    await _dbService.saveSystemPrompt(prompt);
+  }
+
+  Future<void> deleteSystemPrompt(String id) async {
+    await _dbService.deleteSystemPrompt(id);
+  }
+
+  Future<void> updateSystemPromptOrder(List<SystemPrompt> prompts) async {
+    await _dbService.updateSystemPromptOrder(prompts);
   }
 }

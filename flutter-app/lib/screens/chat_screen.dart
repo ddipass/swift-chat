@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/message.dart';
-import '../models/conversation.dart';
+import 'system_prompt_screen.dart';import '../models/conversation.dart';
 import '../widgets/markdown_viewer.dart';
 import 'package:uuid/uuid.dart';
 
@@ -129,8 +129,24 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('SwiftChat'),
-        actions: [
-          Consumer<ChatProvider>(
+        subtitle: Consumer<ChatProvider>(
+          builder: (context, chat, _) {
+            if (chat.systemPrompt == null) return null;
+            return const Text('System Prompt Active', style: TextStyle(fontSize: 12));
+          },
+        ),        actions: [
+          IconButton(
+            icon: const Icon(Icons.psychology),
+            tooltip: 'System Prompt',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SystemPromptScreen(),
+                ),
+              );
+            },
+          ),          Consumer<ChatProvider>(
             builder: (context, chat, _) {
               if (chat.models.isEmpty) return const SizedBox();
               return PopupMenuButton<String>(

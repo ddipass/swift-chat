@@ -3,11 +3,12 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
+import '../models/system_prompt.dart';
 
 class DatabaseService {
   static Database? _database;
   static const String _dbName = 'swiftchat.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -23,6 +24,7 @@ class DatabaseService {
       path,
       version: _dbVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -49,8 +51,49 @@ class DatabaseService {
     ''');
 
     await db.execute('''
+      CREATE TABLE system_prompts (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        prompt TEXT NOT NULL,
+        is_built_in INTEGER NOT NULL DEFAULT 0,
+        "order" INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
       CREATE INDEX idx_messages_conversation ON messages(conversation_id)
     ''');
+
+    await db.execute('''
+      CREATE INDEX idx_prompts_order ON system_prompts("order")
+    ''');
+
+    // Insert built-in prompts
+    for (final prompt in BuiltInPrompts.prompts) {
+      await db.insert('system_prompts', prompt.toJson());
+    }
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE system_prompts (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          prompt TEXT NOT NULL,
+          is_built_in INTEGER NOT NULL DEFAULT 0,
+          "order" INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+
+      await db.execute('''
+        CREATE INDEX idx_prompts_order ON system_prompts("order")
+      ''');
+
+      for (final prompt in BuiltInPrompts.prompts) {
+        await db.insert('system_prompts', prompt.toJson());
+      }
+    }
   }
 
   // Conversations
@@ -67,7 +110,6 @@ class DatabaseService {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    // Save messages
     for (final message in conversation.messages) {
       await saveMessage(conversation.id, message);
     }
@@ -144,6 +186,47 @@ class DatabaseService {
         contents: contents,
       );
     }).toList();
+  }
+
+  // System Prompts
+  Future<void> saveSystemPrompt(SystemPrompt prompt) async {
+    final db = await database;
+    await db.insert(
+      'system_prompts',
+      prompt.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<SystemPrompt>> loadSystemPrompts() async {
+    final db = await database;
+    final maps = await db.query(
+      'system_prompts',
+      orderBy: '"order" ASC',
+    );
+
+    return maps.map((map) => SystemPrompt.fromJson(map)).toList();
+  }
+
+  Future<void> deleteSystemPrompt(String id) async {
+    final db = await database;
+    await db.delete('system_prompts', where: 'id = ? AND is_built_in = 0', whereArgs: [id]);
+  }
+
+  Future<void> updateSystemPromptOrder(List<SystemPrompt> prompts) async {
+    final db = await database;
+    final batch = db.batch();
+    
+    for (int i = 0; i < prompts.length; i++) {
+      batch.update(
+        'system_prompts',
+        {'order': i},
+        where: 'id = ?',
+        whereArgs: [prompts[i].id],
+      );
+    }
+    
+    await batch.commit();
   }
 
   Future<void> close() async {
