@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_service.dart';
+import 'mcp_servers_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -22,7 +23,33 @@ class SettingsScreen extends StatelessWidget {
                 onChanged: (value) => settings.setDarkMode(value),
               ),
               const Divider(),
-              const ListTile(
+              ListTile(
+                leading: const Icon(Icons.extension),
+                title: const Text('MCP Servers'),
+                subtitle: const Text('Manage MCP server connections'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  if (settings.selectedProvider == ApiProvider.bedrock &&
+                      settings.isConfigured) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MCPServersScreen(
+                          apiUrl: settings.bedrockApiUrl,
+                          apiKey: settings.bedrockApiKey,
+                        ),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('MCP only available with Bedrock API'),
+                      ),
+                    );
+                  }
+                },
+              ),
+              const Divider(),              const ListTile(
                 title: Text('API Provider'),
                 subtitle: Text('Select your AI provider'),
               ),
@@ -37,7 +64,33 @@ class SettingsScreen extends StatelessWidget {
                 );
               }),
               const Divider(),
-              if (settings.selectedProvider == ApiProvider.bedrock)
+              ListTile(
+                leading: const Icon(Icons.extension),
+                title: const Text('MCP Servers'),
+                subtitle: const Text('Manage MCP server connections'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  if (settings.selectedProvider == ApiProvider.bedrock &&
+                      settings.isConfigured) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MCPServersScreen(
+                          apiUrl: settings.bedrockApiUrl,
+                          apiKey: settings.bedrockApiKey,
+                        ),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('MCP only available with Bedrock API'),
+                      ),
+                    );
+                  }
+                },
+              ),
+              const Divider(),              if (settings.selectedProvider == ApiProvider.bedrock)
                 _BedrockSettings(),
               if (settings.selectedProvider == ApiProvider.ollama)
                 _OllamaSettings(),
