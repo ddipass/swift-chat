@@ -16,6 +16,21 @@
 - [x] 升级检查API
 - [x] 错误处理和重试机制
 
+### 数据持久化 (Data Persistence)
+- [x] DatabaseService - SQLite数据库
+- [x] 会话本地存储
+- [x] 消息本地存储
+- [x] 自动加载历史会话
+
+### 多媒体支持 (Multimedia Support)
+- [x] FileService - 文件处理服务
+- [x] 图片选择和上传
+- [x] 图片压缩和Base64编码
+- [x] 文档选择和上传
+- [x] 视频选择和上传
+- [x] 附件预览和删除
+- [x] 消息中显示图片
+
 ### UI页面 (UI Screens)
 - [x] ChatScreen - 聊天界面
   - [x] 消息列表显示
@@ -23,6 +38,8 @@
   - [x] 流式消息更新
   - [x] 模型选择
   - [x] 错误提示
+  - [x] 多媒体附件支持
+  - [x] 附件预览
 - [x] HistoryScreen - 会话历史
   - [x] 会话列表
   - [x] 滑动删除
@@ -39,6 +56,8 @@
   - [x] 消息发送
   - [x] 流式响应处理
   - [x] 模型管理
+  - [x] 数据库集成
+  - [x] 文件服务集成
 - [x] SettingsProvider
   - [x] 配置持久化
   - [x] API服务初始化
@@ -46,29 +65,19 @@
 
 ## 🚧 进行中 (In Progress)
 
-### 多媒体支持 (Multimedia Support)
-- [ ] 图片上传和预览
-- [ ] 视频上传和播放
-- [ ] 文档上传和预览
-- [ ] 图片生成界面
+### UI优化 (UI Improvements)
+- [ ] 代码块语法高亮
+- [ ] LaTeX公式渲染
+- [ ] Mermaid图表渲染
+- [ ] 表格优化显示
 
 ### 高级功能 (Advanced Features)
 - [ ] System Prompt管理
 - [ ] MCP服务器集成
 - [ ] Tools集成
 - [ ] 会话搜索
-- [ ] 消息复制/分享
 
 ## 📋 待完成 (TODO)
-
-### UI优化 (UI Improvements)
-- [ ] 复制React Native的完整UI设计
-- [ ] 代码块语法高亮
-- [ ] LaTeX公式渲染
-- [ ] Mermaid图表渲染
-- [ ] 表格优化显示
-- [ ] 加载动画
-- [ ] 空状态优化
 
 ### 功能完善 (Feature Completion)
 - [ ] Ollama API支持
@@ -79,12 +88,8 @@
 - [ ] 虚拟试穿 (Nova Canvas)
 - [ ] Token使用统计
 - [ ] 费用统计
-
-### 数据持久化 (Data Persistence)
-- [ ] 会话本地存储
-- [ ] 消息本地存储
-- [ ] 配置加密存储
-- [ ] 数据导入导出
+- [ ] 消息复制/分享
+- [ ] 图片生成界面
 
 ### 国际化 (Internationalization)
 - [ ] 中文支持
@@ -107,34 +112,40 @@
 | 代码高亮 | ✅ | ⏳ | 待完成 |
 | LaTeX | ✅ | ⏳ | 待完成 |
 | Mermaid | ✅ | ⏳ | 待完成 |
-| 图片上传 | ✅ | ⏳ | 待完成 |
-| 视频上传 | ✅ | ⏳ | 待完成 |
-| 文档上传 | ✅ | ⏳ | 待完成 |
-| 图片生成 | ✅ | ⏳ | 待完成 |
+| 图片上传 | ✅ | ✅ | 完成 |
+| 视频上传 | ✅ | ✅ | 完成 |
+| 文档上传 | ✅ | ✅ | 完成 |
+| 图片生成 | ✅ | ⏳ | API已实现 |
 | 会话管理 | ✅ | ✅ | 完成 |
 | System Prompt | ✅ | ⏳ | 待完成 |
 | MCP集成 | ✅ | ⏳ | 待完成 |
 | Tools集成 | ✅ | ⏳ | 待完成 |
 | 多模型支持 | ✅ | ✅ | 完成 |
 | 明暗主题 | ✅ | ✅ | 完成 |
-| 本地存储 | ✅ | ⏳ | 待完成 |
+| 本地存储 | ✅ | ✅ | 完成 |
 
 ## 🎯 下一步计划
 
-### 第一优先级 (P0)
-1. **多媒体支持** - 图片、视频、文档上传
-2. **数据持久化** - 会话和消息本地存储
-3. **UI完善** - 代码高亮、LaTeX、表格
+### 第一优先级 (P0) - 已完成 ✅
+1. ~~多媒体支持~~ - 图片、视频、文档上传 ✅
+2. ~~数据持久化~~ - 会话和消息本地存储 ✅
 
 ### 第二优先级 (P1)
+3. **UI完善** - 代码高亮、LaTeX、表格
 4. **System Prompt** - 预设提示词管理
 5. **其他API支持** - Ollama, DeepSeek, OpenAI
-6. **MCP集成** - MCP服务器管理
 
 ### 第三优先级 (P2)
+6. **MCP集成** - MCP服务器管理
 7. **高级渲染** - Mermaid图表
 8. **语音功能** - Nova Sonic集成
 9. **图片生成** - Nova Canvas界面
+
+## 🎉 重要里程碑
+
+- ✅ **2025-12-12**: 完成核心功能迁移
+- ✅ **2025-12-12**: 实现多媒体支持
+- ✅ **2025-12-12**: 实现数据持久化
 
 ## 📝 技术债务 (Technical Debt)
 
@@ -162,5 +173,5 @@
 - [Flutter Documentation](https://flutter.dev/docs)
 - [Provider Package](https://pub.dev/packages/provider)
 - [Flutter Markdown](https://pub.dev/packages/flutter_markdown)
-- [HTTP Package](https://pub.dev/packages/http)
+- [SQLite Package](https://pub.dev/packages/sqflite)
 - [SwiftChat React Native](../react-native/)
