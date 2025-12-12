@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_highlight/flutter_highlight.dart';
+import 'package:flutter_highlight/themes/github.dart';
+import 'package:flutter_highlight/themes/github-dark.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/message.dart';
@@ -18,6 +22,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final _uuid = const Uuid();
+  List<MessageContent> _attachments = [];
 
   @override
   void dispose() {
@@ -26,9 +31,39 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _pickImages() async {
+    final chatProvider = context.read<ChatProvider>();
+    final contents = await chatProvider.fileService.pickImages();
+    if (contents != null) {
+      setState(() {
+        _attachments.addAll(contents);
+      });
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    final chatProvider = context.read<ChatProvider>();
+    final content = await chatProvider.fileService.pickDocument();
+    if (content != null) {
+      setState(() {
+        _attachments.add(content);
+      });
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    final chatProvider = context.read<ChatProvider>();
+    final content = await chatProvider.fileService.pickVideo();
+    if (content != null) {
+      setState(() {
+        _attachments.add(content);
+      });
+    }
+  }
+
+  void _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && _attachments.isEmpty) return;
 
     final chatProvider = context.read<ChatProvider>();
     final settings = context.read<SettingsProvider>();
@@ -49,8 +84,17 @@ class _ChatScreenState extends State<ChatScreen> {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      chatProvider.addConversation(conversation);
+      await chatProvider.addConversation(conversation);
       chatProvider.setCurrentConversation(conversation);
+    }
+
+    // Build message contents
+    final contents = <MessageContent>[];
+    if (_attachments.isNotEmpty) {
+      contents.addAll(_attachments);
+    }
+    if (text.isNotEmpty) {
+      contents.add(MessageContent(type: 'text', text: text));
     }
 
     // Add user message
@@ -59,10 +103,15 @@ class _ChatScreenState extends State<ChatScreen> {
       role: 'user',
       content: text,
       timestamp: DateTime.now(),
+      contents: contents,
     );
     
     _messageController.clear();
-    chatProvider.sendMessage(userMessage);
+    setState(() {
+      _attachments.clear();
+    });
+    
+    await chatProvider.sendMessage(userMessage);
     _scrollToBottom();
   }
 
@@ -80,6 +129,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('SwiftChat'),
@@ -165,44 +216,32 @@ class _ChatScreenState extends State<ChatScreen> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final isUser = message.role == 'user';
-                    
-                    return Align(
-                      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.75,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isUser
-                              ? Theme.of(context).colorScheme.primaryContainer
-                              : Theme.of(context).colorScheme.surfaceVariant,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: isUser
-                            ? Text(
-                                message.content,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                ),
-                              )
-                            : MarkdownBody(
-                                data: message.content,
-                                styleSheet: MarkdownStyleSheet(
-                                  p: TextStyle(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                      ),
-                    );
+                    return _MessageBubble(message: message, isDark: isDark);
                   },
                 );
               },
             ),
           ),
+          if (_attachments.isNotEmpty)
+            Container(
+              height: 100,
+              padding: const EdgeInsets.all(8),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _attachments.length,
+                itemBuilder: (context, index) {
+                  final attachment = _attachments[index];
+                  return _AttachmentPreview(
+                    attachment: attachment,
+                    onRemove: () {
+                      setState(() {
+                        _attachments.removeAt(index);
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
           Consumer<ChatProvider>(
             builder: (context, chat, _) {
               if (chat.isLoading) {
@@ -225,10 +264,52 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             child: Row(
               children: [
-                IconButton(
+                PopupMenuButton(
                   icon: const Icon(Icons.attach_file),
-                  onPressed: () {
-                    // TODO: Attach file
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'image',
+                      child: Row(
+                        children: [
+                          Icon(Icons.image),
+                          SizedBox(width: 8),
+                          Text('Images'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'document',
+                      child: Row(
+                        children: [
+                          Icon(Icons.description),
+                          SizedBox(width: 8),
+                          Text('Document'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'video',
+                      child: Row(
+                        children: [
+                          Icon(Icons.videocam),
+                          SizedBox(width: 8),
+                          Text('Video'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'image':
+                        _pickImages();
+                        break;
+                      case 'document':
+                        _pickDocument();
+                        break;
+                      case 'video':
+                        _pickVideo();
+                        break;
+                    }
                   },
                 ),
                 Expanded(
@@ -248,6 +329,134 @@ class _ChatScreenState extends State<ChatScreen> {
                   onPressed: _sendMessage,
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MessageBubble extends StatelessWidget {
+  final Message message;
+  final bool isDark;
+
+  const _MessageBubble({required this.message, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.role == 'user';
+    
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        decoration: BoxDecoration(
+          color: isUser
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context).colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (message.contents != null)
+              ...message.contents!.map((content) {
+                if (content.type == 'image' && content.imageSource != null) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        base64Decode(content.imageSource!),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox();
+              }),
+            if (isUser)
+              Text(
+                message.content,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              )
+            else
+              MarkdownBody(
+                data: message.content,
+                styleSheet: MarkdownStyleSheet(
+                  p: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  code: TextStyle(
+                    backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AttachmentPreview extends StatelessWidget {
+  final MessageContent attachment;
+  final VoidCallback onRemove;
+
+  const _AttachmentPreview({
+    required this.attachment,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 80,
+      margin: const EdgeInsets.only(right: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey),
+      ),
+      child: Stack(
+        children: [
+          if (attachment.type == 'image' && attachment.imageSource != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(
+                base64Decode(attachment.imageSource!),
+                fit: BoxFit.cover,
+                width: 80,
+                height: 80,
+              ),
+            )
+          else
+            Center(
+              child: Icon(
+                attachment.type == 'document' ? Icons.description : Icons.videocam,
+                size: 40,
+              ),
+            ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 16, color: Colors.white),
+              ),
             ),
           ),
         ],

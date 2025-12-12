@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import '../models/message.dart';
 import '../models/conversation.dart';
 import '../services/bedrock_api_service.dart';
+import '../services/database_service.dart';
+import '../services/file_service.dart';
 
 class ChatProvider with ChangeNotifier {
   List<Conversation> _conversations = [];
@@ -9,6 +11,8 @@ class ChatProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   BedrockApiService? _apiService;
+  final DatabaseService _dbService = DatabaseService();
+  final FileService _fileService = FileService();
   List<Map<String, dynamic>> _models = [];
   String? _selectedModelId;
   String? _systemPrompt;
@@ -20,6 +24,16 @@ class ChatProvider with ChangeNotifier {
   List<Map<String, dynamic>> get models => _models;
   String? get selectedModelId => _selectedModelId;
   String? get systemPrompt => _systemPrompt;
+  FileService get fileService => _fileService;
+
+  ChatProvider() {
+    _loadConversations();
+  }
+
+  Future<void> _loadConversations() async {
+    _conversations = await _dbService.loadConversations();
+    notifyListeners();
+  }
 
   void setApiService(BedrockApiService service) {
     _apiService = service;
@@ -61,8 +75,9 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void addConversation(Conversation conversation) {
+  Future<void> addConversation(Conversation conversation) async {
     _conversations.insert(0, conversation);
+    await _dbService.saveConversation(conversation);
     notifyListeners();
   }
 
@@ -71,10 +86,12 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void addMessage(Message message) {
+  Future<void> addMessage(Message message) async {
     if (_currentConversation != null) {
       _currentConversation!.messages.add(message);
       _currentConversation!.updatedAt = DateTime.now();
+      await _dbService.saveMessage(_currentConversation!.id, message);
+      await _dbService.saveConversation(_currentConversation!);
       notifyListeners();
     }
   }
@@ -86,11 +103,19 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  void deleteConversation(String id) {
+  Future<void> saveLastMessage() async {
+    if (_currentConversation != null && _currentConversation!.messages.isNotEmpty) {
+      final lastMessage = _currentConversation!.messages.last;
+      await _dbService.saveMessage(_currentConversation!.id, lastMessage);
+    }
+  }
+
+  Future<void> deleteConversation(String id) async {
     _conversations.removeWhere((c) => c.id == id);
     if (_currentConversation?.id == id) {
       _currentConversation = null;
     }
+    await _dbService.deleteConversation(id);
     notifyListeners();
   }
 
@@ -100,7 +125,7 @@ class ChatProvider with ChangeNotifier {
       return;
     }
 
-    addMessage(userMessage);
+    await addMessage(userMessage);
     setLoading(true);
     setError(null);
 
@@ -111,18 +136,23 @@ class ChatProvider with ChangeNotifier {
       content: '',
       timestamp: DateTime.now(),
     );
-    addMessage(assistantMessage);
+    await addMessage(assistantMessage);
 
     try {
       final stream = _apiService!.converseStream(
         modelId: _selectedModelId!,
-        messages: _currentConversation!.messages.where((m) => m.role != 'assistant' || m.content.isNotEmpty).toList(),
+        messages: _currentConversation!.messages
+            .where((m) => m.role != 'assistant' || m.content.isNotEmpty)
+            .toList(),
         systemPrompt: _systemPrompt,
       );
 
       await for (final chunk in stream) {
         updateLastMessage(chunk);
       }
+
+      // Save final message
+      await saveLastMessage();
     } catch (e) {
       setError('Failed to send message: $e');
       // Remove empty assistant message on error
