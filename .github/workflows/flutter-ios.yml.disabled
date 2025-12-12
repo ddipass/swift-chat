@@ -36,9 +36,3 @@ jobs:
           cd build/ios/iphoneos
           zip -r SwiftChat.ipa Payload
 
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: SwiftChat-iOS
-          path: flutter-app/build/ios/iphoneos/SwiftChat.ipa
-          retention-days: 30

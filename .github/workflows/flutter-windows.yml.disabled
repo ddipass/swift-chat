@@ -32,9 +32,3 @@ jobs:
         working-directory: flutter-app
         run: flutter build windows --release
 
-      - name: Upload Windows build
-        uses: actions/upload-artifact@v4
-        with:
-          name: SwiftChat-Windows
-          path: flutter-app/build/windows/x64/runner/Release/
-          retention-days: 30

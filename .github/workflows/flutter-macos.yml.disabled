@@ -45,9 +45,3 @@ jobs:
             "SwiftChat.dmg" \
             "build/macos/Build/Products/Release/swift_chat.app"
 
-      - name: Upload DMG
-        uses: actions/upload-artifact@v4
-        with:
-          name: SwiftChat-macOS
-          path: flutter-app/SwiftChat.dmg
-          retention-days: 30
