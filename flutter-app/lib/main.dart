@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/chat_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/history_screen.dart';
 import 'providers/chat_provider.dart';
 import 'providers/settings_provider.dart';
 
@@ -17,7 +18,17 @@ class SwiftChatApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ChatProvider()),
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProxyProvider<ChatProvider, SettingsProvider>(
+          create: (context) {
+            final settings = SettingsProvider();
+            settings.setChatProvider(context.read<ChatProvider>());
+            return settings;
+          },
+          update: (context, chat, settings) {
+            settings?.setChatProvider(chat);
+            return settings!;
+          },
+        ),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) {
@@ -61,6 +72,7 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
     const ChatScreen(),
+    const HistoryScreen(),
     const SettingsScreen(),
   ];
 
@@ -80,6 +92,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.chat_outlined),
             selectedIcon: Icon(Icons.chat),
             label: 'Chat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_outlined),
+            selectedIcon: Icon(Icons.history),
+            label: 'History',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

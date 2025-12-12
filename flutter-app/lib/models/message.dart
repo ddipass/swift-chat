@@ -3,18 +3,14 @@ class Message {
   final String role; // 'user' or 'assistant'
   String content;
   final DateTime timestamp;
-  final List<String>? images;
-  final String? videoPath;
-  final String? documentPath;
+  final List<MessageContent>? contents;
 
   Message({
     required this.id,
     required this.role,
     required this.content,
     required this.timestamp,
-    this.images,
-    this.videoPath,
-    this.documentPath,
+    this.contents,
   });
 
   Map<String, dynamic> toJson() {
@@ -23,9 +19,22 @@ class Message {
       'role': role,
       'content': content,
       'timestamp': timestamp.toIso8601String(),
-      'images': images,
-      'videoPath': videoPath,
-      'documentPath': documentPath,
+      'contents': contents?.map((c) => c.toJson()).toList(),
+    };
+  }
+
+  Map<String, dynamic> toApiJson() {
+    if (contents != null && contents!.isNotEmpty) {
+      return {
+        'role': role,
+        'content': contents!.map((c) => c.toApiJson()).toList(),
+      };
+    }
+    return {
+      'role': role,
+      'content': [
+        {'text': content}
+      ],
     };
   }
 
@@ -35,9 +44,82 @@ class Message {
       role: json['role'],
       content: json['content'],
       timestamp: DateTime.parse(json['timestamp']),
-      images: json['images'] != null ? List<String>.from(json['images']) : null,
-      videoPath: json['videoPath'],
-      documentPath: json['documentPath'],
+      contents: json['contents'] != null
+          ? (json['contents'] as List)
+              .map((c) => MessageContent.fromJson(c))
+              .toList()
+          : null,
+    );
+  }
+}
+
+class MessageContent {
+  final String type; // 'text', 'image', 'document', 'video'
+  final String? text;
+  final String? imageSource; // base64 or url
+  final String? documentSource;
+  final String? videoSource;
+  final String? format; // 'png', 'jpeg', 'pdf', etc.
+
+  MessageContent({
+    required this.type,
+    this.text,
+    this.imageSource,
+    this.documentSource,
+    this.videoSource,
+    this.format,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'text': text,
+      'imageSource': imageSource,
+      'documentSource': documentSource,
+      'videoSource': videoSource,
+      'format': format,
+    };
+  }
+
+  Map<String, dynamic> toApiJson() {
+    switch (type) {
+      case 'text':
+        return {'text': text};
+      case 'image':
+        return {
+          'image': {
+            'format': format ?? 'png',
+            'source': {'bytes': imageSource}
+          }
+        };
+      case 'document':
+        return {
+          'document': {
+            'format': format ?? 'pdf',
+            'name': 'document',
+            'source': {'bytes': documentSource}
+          }
+        };
+      case 'video':
+        return {
+          'video': {
+            'format': format ?? 'mp4',
+            'source': {'bytes': videoSource}
+          }
+        };
+      default:
+        return {'text': text ?? ''};
+    }
+  }
+
+  factory MessageContent.fromJson(Map<String, dynamic> json) {
+    return MessageContent(
+      type: json['type'],
+      text: json['text'],
+      imageSource: json['imageSource'],
+      documentSource: json['documentSource'],
+      videoSource: json['videoSource'],
+      format: json['format'],
     );
   }
 }

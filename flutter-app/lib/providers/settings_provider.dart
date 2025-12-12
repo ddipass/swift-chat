@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/bedrock_api_service.dart';
+import 'chat_provider.dart';
 
 class SettingsProvider with ChangeNotifier {
   bool _isDarkMode = false;
@@ -7,15 +9,33 @@ class SettingsProvider with ChangeNotifier {
   String _apiKey = '';
   String _selectedModel = '';
   String _region = 'us-west-2';
+  ChatProvider? _chatProvider;
 
   bool get isDarkMode => _isDarkMode;
   String get apiUrl => _apiUrl;
   String get apiKey => _apiKey;
   String get selectedModel => _selectedModel;
   String get region => _region;
+  bool get isConfigured => _apiUrl.isNotEmpty && _apiKey.isNotEmpty;
 
   SettingsProvider() {
     _loadSettings();
+  }
+
+  void setChatProvider(ChatProvider provider) {
+    _chatProvider = provider;
+    _updateApiService();
+  }
+
+  void _updateApiService() {
+    if (_chatProvider != null && isConfigured) {
+      final service = BedrockApiService(
+        apiUrl: _apiUrl,
+        apiKey: _apiKey,
+        region: _region,
+      );
+      _chatProvider!.setApiService(service);
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -26,6 +46,7 @@ class SettingsProvider with ChangeNotifier {
     _selectedModel = prefs.getString('selectedModel') ?? '';
     _region = prefs.getString('region') ?? 'us-west-2';
     notifyListeners();
+    _updateApiService();
   }
 
   Future<void> setDarkMode(bool value) async {
@@ -40,6 +61,7 @@ class SettingsProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('apiUrl', value);
     notifyListeners();
+    _updateApiService();
   }
 
   Future<void> setApiKey(String value) async {
@@ -47,6 +69,7 @@ class SettingsProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('apiKey', value);
     notifyListeners();
+    _updateApiService();
   }
 
   Future<void> setSelectedModel(String value) async {
@@ -61,5 +84,6 @@ class SettingsProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('region', value);
     notifyListeners();
+    _updateApiService();
   }
 }

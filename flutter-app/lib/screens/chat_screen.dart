@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../providers/chat_provider.dart';
+import '../providers/settings_provider.dart';
 import '../models/message.dart';
 import '../models/conversation.dart';
 import 'package:uuid/uuid.dart';
@@ -29,7 +31,15 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty) return;
 
     final chatProvider = context.read<ChatProvider>();
-    
+    final settings = context.read<SettingsProvider>();
+
+    if (!settings.isConfigured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please configure API settings first')),
+      );
+      return;
+    }
+
     // Create new conversation if needed
     if (chatProvider.currentConversation == null) {
       final conversation = Conversation(
@@ -50,10 +60,9 @@ class _ChatScreenState extends State<ChatScreen> {
       content: text,
       timestamp: DateTime.now(),
     );
-    chatProvider.addMessage(userMessage);
+    
     _messageController.clear();
-
-    // TODO: Call API and add assistant response
+    chatProvider.sendMessage(userMessage);
     _scrollToBottom();
   }
 
@@ -75,30 +84,78 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         title: const Text('SwiftChat'),
         actions: [
+          Consumer<ChatProvider>(
+            builder: (context, chat, _) {
+              if (chat.models.isEmpty) return const SizedBox();
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.model_training),
+                onSelected: (modelId) {
+                  chat.setSelectedModel(modelId);
+                },
+                itemBuilder: (context) {
+                  return chat.models.map((model) {
+                    return PopupMenuItem<String>(
+                      value: model['model_id'],
+                      child: Text(model['model_name'] ?? model['model_id']),
+                    );
+                  }).toList();
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
               context.read<ChatProvider>().setCurrentConversation(null);
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: () {
-              // TODO: Show conversation history
-            },
-          ),
         ],
       ),
       body: Column(
         children: [
+          Consumer<ChatProvider>(
+            builder: (context, chat, _) {
+              if (chat.error != null) {
+                return Container(
+                  color: Colors.red.shade100,
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(chat.error!)),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => chat.setError(null),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox();
+            },
+          ),
           Expanded(
             child: Consumer<ChatProvider>(
               builder: (context, chatProvider, _) {
                 final messages = chatProvider.currentConversation?.messages ?? [];
                 
                 if (messages.isEmpty) {
-                  return const Center(
-                    child: Text('Start a conversation'),
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat_bubble_outline, 
+                          size: 64, 
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Start a conversation',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ],
+                    ),
                   );
                 }
 
@@ -124,20 +181,35 @@ class _ChatScreenState extends State<ChatScreen> {
                               : Theme.of(context).colorScheme.surfaceVariant,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Text(
-                          message.content,
-                          style: TextStyle(
-                            color: isUser
-                                ? Theme.of(context).colorScheme.onPrimaryContainer
-                                : Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
+                        child: isUser
+                            ? Text(
+                                message.content,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                ),
+                              )
+                            : MarkdownBody(
+                                data: message.content,
+                                styleSheet: MarkdownStyleSheet(
+                                  p: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
                       ),
                     );
                   },
                 );
               },
             ),
+          ),
+          Consumer<ChatProvider>(
+            builder: (context, chat, _) {
+              if (chat.isLoading) {
+                return const LinearProgressIndicator();
+              }
+              return const SizedBox();
+            },
           ),
           Container(
             padding: const EdgeInsets.all(16),
