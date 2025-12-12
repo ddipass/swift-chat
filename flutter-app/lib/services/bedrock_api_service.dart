@@ -1,9 +1,10 @@
+import 'api_service.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/message.dart';
 
-class BedrockApiService {
+class BedrockApiService implements ApiService {
   final String apiUrl;
   final String apiKey;
   final String region;

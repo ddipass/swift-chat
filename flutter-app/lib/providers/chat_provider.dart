@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/message.dart';
 import '../models/conversation.dart';
 import '../models/system_prompt.dart';
-import '../services/bedrock_api_service.dart';
+import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../services/file_service.dart';
 
@@ -11,7 +11,7 @@ class ChatProvider with ChangeNotifier {
   Conversation? _currentConversation;
   bool _isLoading = false;
   String? _error;
-  BedrockApiService? _apiService;
+  ApiService? _apiService;
   final DatabaseService _dbService = DatabaseService();
   final FileService _fileService = FileService();
   List<Map<String, dynamic>> _models = [];
@@ -36,7 +36,7 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void setApiService(BedrockApiService service) {
+  void setApiService(ApiService service) {
     _apiService = service;
     loadModels();
   }
