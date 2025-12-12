@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_service.dart';
 import 'mcp_servers_screen.dart';
+import 'tools_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -49,6 +50,17 @@ class SettingsScreen extends StatelessWidget {
                   }
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.build),
+                title: const Text('Tools'),
+                subtitle: const Text('View available tools'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  if (settings.selectedProvider == ApiProvider.bedrock && settings.isConfigured) {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => ToolsScreen(apiUrl: settings.bedrockApiUrl, apiKey: settings.bedrockApiKey)));
+                  }
+                },
+              ),
               const Divider(),              const ListTile(
                 title: Text('API Provider'),
                 subtitle: Text('Select your AI provider'),
@@ -87,6 +99,17 @@ class SettingsScreen extends StatelessWidget {
                         content: Text('MCP only available with Bedrock API'),
                       ),
                     );
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.build),
+                title: const Text('Tools'),
+                subtitle: const Text('View available tools'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  if (settings.selectedProvider == ApiProvider.bedrock && settings.isConfigured) {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => ToolsScreen(apiUrl: settings.bedrockApiUrl, apiKey: settings.bedrockApiKey)));
                   }
                 },
               ),
