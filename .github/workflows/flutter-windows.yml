@@ -1,0 +1,40 @@
+name: Flutter Windows Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Enable Windows desktop
+        working-directory: flutter-app
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        working-directory: flutter-app
+        run: flutter pub get
+
+      - name: Build Windows app
+        working-directory: flutter-app
+        run: flutter build windows --release
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftChat-Windows
+          path: flutter-app/build/windows/x64/runner/Release/
+          retention-days: 30
