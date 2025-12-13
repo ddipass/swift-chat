@@ -441,7 +441,41 @@ styleSheet: MarkdownStyleSheet(
 
 ---
 
-### Day 3-4: 设置界面核心
+### Day 3-4: 设置界面核心 ✅ 已完成 (2025-12-14)
+- [x] Bedrock配置表单
+  - [x] API URL输入框
+  - [x] API Key输入框（密码隐藏）
+  - [x] Region选择器（5个区域）
+  - [x] Text Model选择器（4个模型）
+- [x] 配置保存/加载
+  - [x] SharedPreferences集成
+  - [x] 自动加载已保存配置
+  - [x] 保存按钮（AppBar右侧✓）
+  - [x] 保存成功提示
+- [x] 表单验证
+  - [x] 检查必填字段
+  - [x] 错误提示显示
+- [x] 自定义组件
+  - [x] CustomTextField（标签、占位符、密码隐藏、主题适配）
+  - [x] CustomDropdown（标签、选项列表、主题适配）
+
+**输出文件**:
+```
+✓ lib/screens/settings_screen.dart (完整实现)
+✓ lib/widgets/custom_text_field.dart
+✓ lib/widgets/custom_dropdown.dart
+```
+
+**Git提交**:
+```
+[本次] - feat: implement settings screen with Bedrock configuration
+```
+
+**参考**: `react-native/src/settings/SettingsScreen.tsx`
+
+---
+
+### Day 5: 文件上传基础
 - [ ] Bedrock配置表单
   - [ ] API URL输入框
   - [ ] API Key输入框
