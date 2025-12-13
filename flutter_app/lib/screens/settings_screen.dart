@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/theme_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -23,7 +24,7 @@ class SettingsScreen extends StatelessWidget {
         ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: colors.text),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.go('/chat/-1'),
         ),
       ),
       body: Center(
