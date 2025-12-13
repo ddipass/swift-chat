@@ -68,8 +68,8 @@ flutter doctor
 ```
 
 **验证**:
-- [ ] 执行 `flutter doctor` 无错误
-- [ ] 执行 `flutter run -d chrome` 能看到默认Demo
+- [x] 执行 `flutter doctor` 无错误
+- [x] 执行 `flutter run -d chrome` 能看到默认Demo
 
 ---
 
@@ -160,9 +160,9 @@ class SwiftChatColors {
 ```
 
 **验证**:
-- [ ] 颜色数量与源文件一致 (52个)
-- [ ] 使用 ColorZilla 验证颜色值正确
-- [ ] 文件能编译通过
+- [x] 颜色数量与源文件一致 (52个)
+- [x] 使用 ColorZilla 验证颜色值正确
+- [x] 文件能编译通过
 
 **参考**: `docs/UI_REPLICATION_GUIDE.md § 颜色系统`
 
@@ -220,31 +220,31 @@ class SwiftChatTextStyles {
 ```
 
 **Day 1-2 完成标准**:
-- [ ] 所有任务勾选 [x]
-- [ ] 项目能运行
-- [ ] 浅色/深色主题颜色正确
-- [ ] Git提交: `git commit -m "feat: setup project and design system"`
+- [x] 所有任务勾选 [x]
+- [x] 项目能运行
+- [x] 浅色/深色主题颜色正确
+- [x] Git提交: `git commit -m "feat: setup project and design system"`
 
 ---
 
 ### Day 3-4: 聊天界面基础
-- [ ] 消息数据模型 (简化版)
-  - [ ] Message类
-  - [ ] User类
-  - [ ] 序列化/反序列化
-- [ ] 消息列表
-  - [ ] ListView.builder
-  - [ ] 倒序显示
-  - [ ] 基础滚动
-- [ ] 基础输入框
-  - [ ] TextField
-  - [ ] 多行支持
-- [ ] 发送按钮
-  - [ ] 图标
-  - [ ] 点击事件
-- [ ] Mock API服务
-  - [ ] sendMessage() 方法
-  - [ ] 模拟延迟
+- [x] 消息数据模型 (简化版)
+  - [x] Message类
+  - [x] User类 (通过isUser字段实现)
+  - [x] 序列化/反序列化
+- [x] 消息列表
+  - [x] ListView.builder
+  - [x] 倒序显示
+  - [x] 基础滚动
+- [x] 基础输入框
+  - [x] TextField
+  - [x] 多行支持
+- [x] 发送按钮
+  - [x] 图标
+  - [x] 点击事件
+- [x] Mock API服务
+  - [x] sendMessage() 方法
+  - [x] 模拟延迟
 
 **输出文件**:
 ```
