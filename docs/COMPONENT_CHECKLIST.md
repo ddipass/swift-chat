@@ -606,3 +606,43 @@ class SwiftChatTextStyles {
 ---
 
 **最后更新**: 2025-12-13
+---
+
+## 📋 开发日志
+
+### 2025-12-14 (Week 2 Day 1-2) ✅ 完成
+
+#### 已完成任务
+- [x] 消息气泡样式完善（用户/AI）
+- [x] 基础Markdown渲染（段落、粗体、斜体、列表）
+- [x] 代码块语法高亮（flutter_highlight）
+- [x] **代码块复制按钮**（右上角，点击显示完成图标2秒）
+- [x] **点击AI标题复制**（显示完成图标2秒）
+- [x] **长按消息复制全文**（显示Copied提示，跟随消息位置）
+- [x] **重新生成按钮**（最后一条AI消息下方）
+- [x] **AppBar优化**（44px高度，汉堡菜单，新建对话，主题切换）
+- [x] **Drawer切换**（桌面端和移动端都支持显示/隐藏）
+
+#### Git提交
+```
+8214129 - feat: add code block copy button and improve styling
+866c01a - feat: add message interaction features  
+9d3ac0b - feat: improve AppBar and drawer interaction
+```
+
+#### 修复的问题
+1. 资源加载404 → flutter clean + 删除缓存
+2. 消息引用错误 → 修正为widget.message
+3. Copied提示位置 → 根据isUser动态对齐
+4. Drawer切换失败 → 添加DrawerStateProvider
+
+#### 新增资源
+- copy.png, copy_grey.png, done.png, done_dark.png
+
+---
+
+### 下一步：Week 2 Day 3-4 设置界面核心
+- [ ] 实现Bedrock配置表单
+- [ ] 实现模型选择下拉框
+- [ ] 实现配置保存/加载
+- [ ] 实现表单验证
