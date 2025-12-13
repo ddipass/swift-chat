@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/message.dart';
 import '../services/mock_api_service.dart';
 import '../widgets/message_bubble.dart';
+import '../widgets/app_drawer.dart';
 import '../theme/theme_provider.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -78,6 +79,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: colors.surface,
         title: Text(
