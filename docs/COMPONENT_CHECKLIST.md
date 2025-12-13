@@ -340,20 +340,63 @@ class SwiftChatTextStyles {
 
 ## Week 2: 关键功能补充
 
-### Day 1-2: 消息气泡样式
-- [ ] 用户消息气泡
-  - [ ] 背景色
-  - [ ] 圆角
-  - [ ] 内边距
-  - [ ] 右对齐
-- [ ] AI消息气泡
-  - [ ] 头像
-  - [ ] 用户名
-  - [ ] 左对齐
-- [ ] 基础Markdown渲染
-  - [ ] 段落
-  - [ ] 代码块
-  - [ ] 代码高亮
+### Day 1-2: 消息气泡样式 + Markdown + 交互功能 ✅ 已完成 (2025-12-14)
+- [x] 用户消息气泡
+  - [x] 背景色 (colors.messageBackground)
+  - [x] 圆角 (borderRadius: 22)
+  - [x] 内边距 (horizontal: 16, vertical: 10)
+  - [x] 右对齐 (Align + maxWidth 75%)
+- [x] AI消息气泡
+  - [x] 头像 (bedrock.png, 22x22, borderRadius: 11)
+  - [x] 用户名 ("AI Assistant", fontSize: 16, fontWeight: 500)
+  - [x] 左对齐 (marginLeft: 28)
+- [x] 基础Markdown渲染
+  - [x] 段落 (fontSize: 16, height: 1.625, fontWeight: 300)
+  - [x] 代码块 (codeBackground, borderRadius: 8)
+  - [x] 代码高亮 (flutter_highlight, monokai/github theme)
+  - [x] 粗体、斜体、列表
+- [x] **代码块复制按钮** (新增)
+  - [x] 位置：代码块右上角
+  - [x] 图标：copy.png / copy_grey.png
+  - [x] 反馈：done.png / done_dark.png (2秒)
+  - [x] 语言标签：与复制按钮同行
+- [x] **点击AI标题复制** (新增)
+  - [x] 点击"AI Assistant"复制文本
+  - [x] 显示完成图标2秒
+- [x] **长按消息复制全文** (新增)
+  - [x] GestureDetector.onLongPress
+  - [x] 显示"Copied"提示2秒
+  - [x] 位置跟随消息对齐（用户右侧，AI左侧）
+- [x] **重新生成按钮** (新增)
+  - [x] 仅最后一条AI消息显示
+  - [x] 刷新图标 + "Regenerate"文字
+  - [x] 删除最后AI回复，重新发送用户消息
+- [x] **AppBar优化** (新增)
+  - [x] 高度：44px (toolbarHeight)
+  - [x] 左侧：汉堡菜单图标 (Icons.menu)
+  - [x] 右侧1：新建对话按钮 (Icons.edit_outlined)
+  - [x] 右侧2：主题切换按钮 (Icons.light_mode/dark_mode)
+  - [x] 标题居中："Chat"
+- [x] **Drawer切换** (新增)
+  - [x] DrawerStateProvider状态管理
+  - [x] 移动端：切换overlay drawer
+  - [x] 桌面端：切换permanent drawer显示/隐藏
+
+**输出文件**:
+```
+✓ lib/widgets/message_bubble.dart (完整实现)
+✓ lib/screens/chat_screen.dart (AppBar + 重新生成)
+✓ lib/navigation/app_router.dart (DrawerStateProvider)
+✓ assets/copy.png, copy_grey.png, done.png, done_dark.png
+```
+
+**Git提交**:
+```
+8214129 - feat: add code block copy button and improve styling
+866c01a - feat: add message interaction features  
+9d3ac0b - feat: improve AppBar and drawer interaction
+539ec7d - docs: update COMPONENT_CHECKLIST with Week 2 Day 1-2 progress
+```
 
 **参考**: `react-native/src/chat/component/CustomMessageComponent.tsx`
 
