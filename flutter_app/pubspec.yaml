@@ -86,6 +86,10 @@ flutter:
   assets:
     - assets/bedrock.png
     - assets/bedrock_dark.png
+    - assets/image.png
+    - assets/image_dark.png
+    - assets/settings.png
+    - assets/settings_dark.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
