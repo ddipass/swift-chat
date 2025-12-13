@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/message.dart';
 import '../services/mock_api_service.dart';
+import '../services/bedrock_api_service.dart';
+import '../services/api_service.dart';
 import '../widgets/message_bubble.dart';
 import '../theme/theme_provider.dart';
 import '../navigation/app_router.dart';
@@ -26,14 +29,37 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final List<Message> _messages = [];
   final TextEditingController _textController = TextEditingController();
-  final MockApiService _apiService = MockApiService();
+  ApiService _apiService = MockApiService();
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
+  String _streamingText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _initApiService();
+  }
+
+  Future<void> _initApiService() async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiUrl = prefs.getString('apiUrl') ?? '';
+    final apiKey = prefs.getString('apiKey') ?? '';
+    final region = prefs.getString('region') ?? 'us-east-1';
+    
+    if (apiUrl.isNotEmpty && apiKey.isNotEmpty) {
+      setState(() {
+        _apiService = BedrockApiService(
+          apiUrl: apiUrl,
+          apiKey: apiKey,
+          region: region,
+        );
+      });
+    }
+  }
 
   void _handleRegenerate() async {
     if (_messages.isEmpty || _isLoading) return;
     
-    // Find the last user message
     String? lastUserMessage;
     for (var msg in _messages) {
       if (msg.isUser) {
@@ -44,25 +70,45 @@ class _ChatScreenState extends State<ChatScreen> {
     
     if (lastUserMessage == null) return;
 
-    // Remove the last AI message
     setState(() {
       if (_messages.isNotEmpty && !_messages[0].isUser) {
         _messages.removeAt(0);
       }
       _isLoading = true;
+      _streamingText = '';
     });
 
-    // Get new AI response
+    final prefs = await SharedPreferences.getInstance();
+    final model = prefs.getString('textModel') ?? 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+
     try {
-      final aiMessage = await _apiService.sendMessage(lastUserMessage);
-      setState(() {
-        _messages.insert(0, aiMessage);
-        _isLoading = false;
-      });
-      _scrollToBottom();
+      await for (final responseText in _apiService.sendMessage(
+        text: lastUserMessage,
+        history: _messages.reversed.toList(),
+        model: model,
+      )) {
+        setState(() {
+          _streamingText = responseText;
+        });
+      }
+      
+      if (_streamingText.isNotEmpty) {
+        setState(() {
+          _messages.insert(0, Message(
+            id: const Uuid().v4(),
+            text: _streamingText,
+            isUser: false,
+            createdAt: DateTime.now(),
+          ));
+          _streamingText = '';
+          _isLoading = false;
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
+        _streamingText = '';
       });
     }
   }
@@ -71,7 +117,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _textController.text.trim();
     if (text.isEmpty || _isLoading) return;
 
-    // Add user message
     final userMessage = Message(
       id: const Uuid().v4(),
       text: text,
@@ -82,21 +127,49 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.insert(0, userMessage);
       _isLoading = true;
+      _streamingText = '';
     });
 
     _textController.clear();
     _scrollToBottom();
 
-    // Get AI response
+    final prefs = await SharedPreferences.getInstance();
+    final model = prefs.getString('textModel') ?? 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+
     try {
-      final aiMessage = await _apiService.sendMessage(text);
-      setState(() {
-        _messages.insert(0, aiMessage);
-        _isLoading = false;
-      });
-      _scrollToBottom();
+      await for (final responseText in _apiService.sendMessage(
+        text: text,
+        history: _messages.reversed.toList(),
+        model: model,
+      )) {
+        setState(() {
+          _streamingText = responseText;
+        });
+      }
+      
+      // 完成后添加到消息列表
+      if (_streamingText.isNotEmpty) {
+        setState(() {
+          _messages.insert(0, Message(
+            id: const Uuid().v4(),
+            text: _streamingText,
+            isUser: false,
+            createdAt: DateTime.now(),
+          ));
+          _streamingText = '';
+          _isLoading = false;
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
       setState(() {
+        _messages.insert(0, Message(
+          id: const Uuid().v4(),
+          text: 'Error: $e',
+          isUser: false,
+          createdAt: DateTime.now(),
+        ));
+        _streamingText = '';
         _isLoading = false;
       });
     }
@@ -207,10 +280,24 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _scrollController,
                     reverse: true,
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: _messages.length,
+                    itemCount: _messages.length + (_streamingText.isNotEmpty ? 1 : 0),
                     itemBuilder: (context, index) {
-                      final message = _messages[index];
-                      final isLastAIMessage = index == 0 && !message.isUser;
+                      // 显示流式消息
+                      if (index == 0 && _streamingText.isNotEmpty) {
+                        return MessageBubble(
+                          message: Message(
+                            id: 'streaming',
+                            text: _streamingText,
+                            isUser: false,
+                            createdAt: DateTime.now(),
+                          ),
+                          isLastAIMessage: false,
+                        );
+                      }
+                      
+                      final msgIndex = _streamingText.isNotEmpty ? index - 1 : index;
+                      final message = _messages[msgIndex];
+                      final isLastAIMessage = msgIndex == 0 && !message.isUser && _streamingText.isEmpty;
                       
                       return MessageBubble(
                         message: message,

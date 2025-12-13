@@ -4,6 +4,7 @@ from typing import List
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, Request as FastAPIRequest
 from fastapi.responses import StreamingResponse, PlainTextResponse, HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 import boto3
 import json
 import random
@@ -27,6 +28,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有来源，生产环境应该限制具体域名
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 security = HTTPBearer()
 mcp_manager = MCPManager()
 tool_manager = ToolManager()
