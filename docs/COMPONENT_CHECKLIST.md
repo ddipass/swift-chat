@@ -270,22 +270,42 @@ class SwiftChatTextStyles {
   - [x] 抽屉宽度计算 (434px断点)
   - [x] 开关动画
 - [x] 历史记录列表 (简化版)
-  - [x] 平铺列表 (占位符)
-  - [x] 点击跳转 (待实现)
+  - [x] Mock数据显示
+  - [x] 日期分组 (Today, Yesterday)
+  - [x] 点击跳转
+  - [x] 长按删除
+  - [x] 选中状态高亮
 - [x] 设置页面框架
   - [x] 空白页面
   - [x] 标题栏
+  - [x] 返回按钮 (使用 context.go)
 - [x] 路由配置
   - [x] go_router配置
-  - [x] 路由参数传递
+  - [x] 路由参数传递 (sessionId, tapIndex, mode)
+  - [x] ShellRoute + MainLayout
+  - [x] 响应式布局 (移动端 Drawer, 桌面端 Row)
+- [x] 图片资源
+  - [x] image.png, image_dark.png
+  - [x] settings.png, settings_dark.png
+  - [x] pubspec.yaml 注册 (目录方式)
+  - [x] 代码中正确使用 (不加 assets/ 前缀)
 
 **输出文件**:
 ```
 ✓ lib/navigation/app_router.dart
-✓ lib/screens/settings_screen.dart (框架)
-✓ lib/screens/history_screen.dart (简化版)
-✓ lib/widgets/app_drawer.dart
+✓ lib/screens/settings_screen.dart (完整)
+✓ lib/widgets/app_drawer.dart (完整)
+✓ lib/models/chat_history.dart
+✓ assets/image.png, image_dark.png
+✓ assets/settings.png, settings_dark.png
+✓ docs/FLUTTER_DEBUG_LESSONS.md (重要经验)
 ```
+
+**重要修复**:
+- ✅ 修复图片路径问题 (Image.asset 自动添加 assets/ 前缀)
+- ✅ 修复 Settings 返回按钮 (使用 context.go 而非 Navigator.pop)
+- ✅ 实现完整的历史记录列表 (带分组和交互)
+- ✅ 实现响应式布局 (桌面永久抽屉，移动滑动抽屉)
 
 ---
 
@@ -302,6 +322,16 @@ class SwiftChatTextStyles {
 ```
 ✓ lib/services/api_service.dart
 ```
+
+**Day 5-6 完成标准**:
+- [x] 所有任务勾选 [x]
+- [x] 导航结构正确实现
+- [x] 抽屉内容完整显示
+- [x] 图片资源正确加载
+- [x] 路由跳转正常工作
+- [x] Git提交: `git commit -m "feat: complete navigation structure (Week 1 Day 5-6)"`
+
+**当前状态**: ✅ Week 1 Day 5-6 完成，准备进入 Day 7
 
 ---
 
