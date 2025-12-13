@@ -1,15 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../screens/chat_screen.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/app_drawer.dart';
+
+// Drawer state provider
+class DrawerStateProvider extends ChangeNotifier {
+  bool _isDrawerVisible = true;
+
+  bool get isDrawerVisible => _isDrawerVisible;
+
+  void toggleDrawer() {
+    _isDrawerVisible = !_isDrawerVisible;
+    notifyListeners();
+  }
+
+  void showDrawer() {
+    _isDrawerVisible = true;
+    notifyListeners();
+  }
+
+  void hideDrawer() {
+    _isDrawerVisible = false;
+    notifyListeners();
+  }
+}
 
 final router = GoRouter(
   initialLocation: '/chat/-1',
   routes: [
     ShellRoute(
       builder: (context, state, child) {
-        return MainLayout(child: child);
+        return ChangeNotifierProvider(
+          create: (_) => DrawerStateProvider(),
+          child: MainLayout(child: child),
+        );
       },
       routes: [
         GoRoute(
@@ -44,6 +70,7 @@ class MainLayout extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final minWidth = size.width > size.height ? size.height : size.width;
     final isMobile = minWidth <= 434;
+    final drawerState = Provider.of<DrawerStateProvider>(context);
 
     if (isMobile) {
       return Scaffold(
@@ -51,10 +78,11 @@ class MainLayout extends StatelessWidget {
         body: child,
       );
     } else {
+      // Desktop: permanent drawer with toggle support
       return Scaffold(
         body: Row(
           children: [
-            const AppDrawer(),
+            if (drawerState.isDrawerVisible) const AppDrawer(),
             Expanded(child: child),
           ],
         ),

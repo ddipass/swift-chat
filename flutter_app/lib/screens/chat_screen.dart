@@ -5,6 +5,7 @@ import '../models/message.dart';
 import '../services/mock_api_service.dart';
 import '../widgets/message_bubble.dart';
 import '../theme/theme_provider.dart';
+import '../navigation/app_router.dart';
 
 class ChatScreen extends StatefulWidget {
   final int sessionId;
@@ -121,11 +122,36 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Provider.of<ThemeProvider>(context).colors;
+    final size = MediaQuery.of(context).size;
+    final minWidth = size.width > size.height ? size.height : size.width;
+    final isMobile = minWidth <= 434;
 
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
         backgroundColor: colors.surface,
+        elevation: 0,
+        toolbarHeight: 44,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu, color: colors.text, size: 24),
+            onPressed: () {
+              if (isMobile) {
+                // Mobile: toggle Scaffold drawer
+                final scaffoldState = Scaffold.of(context);
+                if (scaffoldState.isDrawerOpen) {
+                  Navigator.of(context).pop();
+                } else {
+                  scaffoldState.openDrawer();
+                }
+              } else {
+                // Desktop: toggle permanent drawer
+                Provider.of<DrawerStateProvider>(context, listen: false).toggleDrawer();
+              }
+            },
+            padding: EdgeInsets.zero,
+          ),
+        ),
         title: Text(
           'Chat',
           style: TextStyle(
@@ -134,17 +160,31 @@ class _ChatScreenState extends State<ChatScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
+        centerTitle: true,
         actions: [
+          // New chat button
+          IconButton(
+            icon: Icon(Icons.edit_outlined, color: colors.text, size: 22),
+            onPressed: () {
+              setState(() {
+                _messages.clear();
+              });
+            },
+            padding: EdgeInsets.zero,
+          ),
+          // Theme toggle button
           IconButton(
             icon: Icon(
               Provider.of<ThemeProvider>(context).isDark
                   ? Icons.light_mode
                   : Icons.dark_mode,
               color: colors.text,
+              size: 22,
             ),
             onPressed: () =>
                 Provider.of<ThemeProvider>(context, listen: false)
                     .toggleTheme(),
+            padding: EdgeInsets.zero,
           ),
         ],
       ),

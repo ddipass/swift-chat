@@ -136,23 +136,31 @@ class _MessageBubbleState extends State<MessageBubble> {
           // Copy feedback for long-press
           if (_messageCopied)
             Padding(
-              padding: const EdgeInsets.only(left: 28, top: 4),
-              child: Row(
-                children: [
-                  Image.asset(
-                    isDark ? 'done_dark.png' : 'done.png',
-                    width: 14,
-                    height: 14,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Copied',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.textSecondary,
+              padding: EdgeInsets.only(
+                left: widget.message.isUser ? 0 : 28,
+                right: widget.message.isUser ? 16 : 0,
+                top: 4,
+              ),
+              child: Align(
+                alignment: widget.message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      isDark ? 'done_dark.png' : 'done.png',
+                      width: 14,
+                      height: 14,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Text(
+                      'Copied',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
@@ -175,7 +183,7 @@ class _MessageBubbleState extends State<MessageBubble> {
           borderRadius: BorderRadius.circular(22),
         ),
         child: Text(
-          message.text,
+          widget.message.text,
           style: TextStyle(
             fontSize: 16,
             height: 1.5, // lineHeight 24 / fontSize 16
@@ -191,7 +199,7 @@ class _MessageBubbleState extends State<MessageBubble> {
     return Container(
       margin: const EdgeInsets.only(top: 1),
       child: MarkdownBody(
-        data: message.text,
+        data: widget.message.text,
         selectable: true,
         styleSheet: MarkdownStyleSheet(
           p: TextStyle(
