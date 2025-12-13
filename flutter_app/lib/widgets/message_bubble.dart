@@ -65,27 +65,46 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildUserMessage(BuildContext context, colors) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: colors.messageBackground,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Text(
-          message.text,
-          style: TextStyle(
-            fontSize: 16,
-            height: 1.5, // lineHeight 24 / fontSize 16
-            color: colors.text,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Flexible(
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: colors.messageBackground,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Text(
+              message.text,
+              style: TextStyle(
+                fontSize: 16,
+                height: 1.5, // lineHeight 24 / fontSize 16
+                color: colors.text,
+              ),
+            ),
           ),
         ),
-      ),
+        const SizedBox(width: 6),
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: colors.primary,
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Icon(
+            Icons.person,
+            size: 14,
+            color: colors.background,
+          ),
+        ),
+      ],
     );
   }
 
