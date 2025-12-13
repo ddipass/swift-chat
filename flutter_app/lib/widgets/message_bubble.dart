@@ -23,7 +23,7 @@ class MessageBubble extends StatelessWidget {
           // Header with avatar and name (AI only)
           if (!message.isUser)
             Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(bottom: 0),
               child: Row(
                 children: [
                   Container(
@@ -52,7 +52,7 @@ class MessageBubble extends StatelessWidget {
               ),
             ),
           
-          // Message content
+          // Message content (marked_box)
           Container(
             margin: const EdgeInsets.only(left: 28, right: 16),
             child: message.isUser
@@ -65,57 +65,42 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildUserMessage(BuildContext context, colors) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Flexible(
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: colors.messageBackground,
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Text(
-              message.text,
-              style: TextStyle(
-                fontSize: 16,
-                height: 1.5, // lineHeight 24 / fontSize 16
-                color: colors.text,
-              ),
-            ),
+    // User message: alignSelf flex-end, no avatar
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: colors.messageBackground,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            fontSize: 16,
+            height: 1.5, // lineHeight 24 / fontSize 16
+            color: colors.text,
           ),
         ),
-        const SizedBox(width: 6),
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: colors.primary,
-            borderRadius: BorderRadius.circular(11),
-          ),
-          child: Icon(
-            Icons.person,
-            size: 14,
-            color: colors.background,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildAIMessage(colors) {
-    // AI messages don't have bubble background, just plain text
-    return Text(
-      message.text,
-      style: TextStyle(
-        fontSize: 16,
-        height: 1.625, // lineHeight 26 / fontSize 16
-        color: colors.text,
+    // AI message: plain text, no background
+    return Padding(
+      padding: const EdgeInsets.only(top: 1),
+      child: Text(
+        message.text,
+        style: TextStyle(
+          fontSize: 16,
+          height: 1.625, // lineHeight 26 / fontSize 16
+          color: colors.text,
+        ),
       ),
     );
   }
