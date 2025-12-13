@@ -26,17 +26,14 @@ class MessageBubble extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 0),
               child: Row(
                 children: [
-                  Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: colors.primary,
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Icon(
-                      Icons.smart_toy,
-                      size: 14,
-                      color: colors.background,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: Image.asset(
+                      Provider.of<ThemeProvider>(context).isDark
+                          ? 'assets/bedrock_dark.png'
+                          : 'assets/bedrock.png',
+                      width: 22,
+                      height: 22,
                     ),
                   ),
                   const SizedBox(width: 6),
