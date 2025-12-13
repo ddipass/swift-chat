@@ -7,6 +7,8 @@ class MockApiService {
     
     // Generate response with Markdown examples
     String response;
+    String? reasoning;
+    
     if (text.toLowerCase().contains('code')) {
       response = '''Here's a simple Flutter example:
 
@@ -30,6 +32,11 @@ class MyApp extends StatelessWidget {
 ```
 
 This creates a basic Flutter app with an AppBar and centered text.''';
+      reasoning = '''To create a Flutter app, I need to:
+1. Define the main() entry point
+2. Create a StatelessWidget for the app structure
+3. Use MaterialApp as the root widget
+4. Add a Scaffold with AppBar and body''';
     } else if (text.toLowerCase().contains('markdown')) {
       response = '''Markdown supports:
 
@@ -43,8 +50,13 @@ This creates a basic Flutter app with an AppBar and centered text.''';
 2. Another item
 
 Inline `code` and code blocks.''';
+      reasoning = '''For Markdown demonstration, I should show:
+- Text formatting (bold, italic)
+- Lists (bullets and numbers)
+- Code examples (inline and blocks)''';
     } else {
       response = 'This is a mock AI response to: "$text"';
+      reasoning = 'This is a general query, so I provide a helpful response.';
     }
     
     return Message(
@@ -52,6 +64,7 @@ Inline `code` and code blocks.''';
       text: response,
       isUser: false,
       createdAt: DateTime.now(),
+      reasoning: reasoning,
     );
   }
 }

@@ -27,6 +27,8 @@ class MessageBubble extends StatefulWidget {
 class _MessageBubbleState extends State<MessageBubble> {
   bool _titleCopied = false;
   bool _messageCopied = false;
+  bool _reasoningCopied = false;
+  bool _reasoningExpanded = false;
 
   void _copyTitle() {
     Clipboard.setData(const ClipboardData(text: 'AI Assistant'));
@@ -42,6 +44,20 @@ class _MessageBubbleState extends State<MessageBubble> {
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _messageCopied = false);
     });
+  }
+
+  void _copyReasoning() {
+    if (widget.message.reasoning != null) {
+      Clipboard.setData(ClipboardData(text: widget.message.reasoning!));
+      setState(() => _reasoningCopied = true);
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _reasoningCopied = false);
+      });
+    }
+  }
+
+  void _toggleReasoning() {
+    setState(() => _reasoningExpanded = !_reasoningExpanded);
   }
 
   @override
@@ -102,6 +118,79 @@ class _MessageBubbleState extends State<MessageBubble> {
                   : _buildAIMessage(context, colors, isDark),
             ),
           ),
+          
+          // Reasoning section (AI only)
+          if (!widget.message.isUser && widget.message.reasoning != null && widget.message.reasoning!.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(left: 28, right: 16, top: 8),
+              decoration: BoxDecoration(
+                color: colors.reasoningBackground,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Reasoning header
+                  GestureDetector(
+                    onTap: _toggleReasoning,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          // Arrow icon
+                          AnimatedRotation(
+                            turns: _reasoningExpanded ? 0.75 : 0.5,
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(
+                              Icons.arrow_back_ios,
+                              size: 14,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Reasoning',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: colors.text,
+                            ),
+                          ),
+                          const Spacer(),
+                          // Copy button
+                          GestureDetector(
+                            onTap: _copyReasoning,
+                            child: Image.asset(
+                              _reasoningCopied
+                                  ? (isDark ? 'done_dark.png' : 'done.png')
+                                  : 'copy_grey.png',
+                              width: 14,
+                              height: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Reasoning content
+                  if (_reasoningExpanded)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      child: MarkdownBody(
+                        data: widget.message.reasoning!,
+                        selectable: true,
+                        styleSheet: MarkdownStyleSheet(
+                          p: TextStyle(
+                            fontSize: 14,
+                            height: 1.5,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           
           // Regenerate button (last AI message only)
           if (!widget.message.isUser && widget.isLastAIMessage && widget.onRegenerate != null)
