@@ -350,43 +350,56 @@ class SwiftChatTextStyles {
   - [x] 头像 (bedrock.png, 22x22, borderRadius: 11)
   - [x] 用户名 ("AI Assistant", fontSize: 16, fontWeight: 500)
   - [x] 左对齐 (marginLeft: 28)
-- [x] 基础Markdown渲染
+- [x] 完整Markdown渲染
   - [x] 段落 (fontSize: 16, height: 1.625, fontWeight: 300)
+  - [x] 标题 (h1-h6, 深色模式适配)
+  - [x] 粗体、斜体、列表 (深色模式适配)
   - [x] 代码块 (codeBackground, borderRadius: 8)
   - [x] 代码高亮 (flutter_highlight, monokai/github theme)
-  - [x] 粗体、斜体、列表
-- [x] **代码块复制按钮** (新增)
+  - [x] 表格渲染 (TableBorder, tableCellsPadding)
+  - [x] **LaTeX 公式** (flutter_markdown_latex)
+    - [x] 行内公式 `$...$`
+    - [x] 块级公式 `$$...$$`
+    - [x] 与其他 Markdown 元素混合显示
+    - [x] 深色模式适配
+- [x] **代码块复制按钮**
   - [x] 位置：代码块右上角
   - [x] 图标：copy.png / copy_grey.png
   - [x] 反馈：done.png / done_dark.png (2秒)
   - [x] 语言标签：与复制按钮同行
-- [x] **点击AI标题复制** (新增)
+- [x] **点击AI标题复制**
   - [x] 点击"AI Assistant"复制文本
   - [x] 显示完成图标2秒
-- [x] **长按消息复制全文** (新增)
+- [x] **长按消息复制全文**
   - [x] GestureDetector.onLongPress
   - [x] 显示"Copied"提示2秒
   - [x] 位置跟随消息对齐（用户右侧，AI左侧）
-- [x] **重新生成按钮** (新增)
+- [x] **重新生成按钮**
   - [x] 仅最后一条AI消息显示
   - [x] 刷新图标 + "Regenerate"文字
   - [x] 删除最后AI回复，重新发送用户消息
-- [x] **AppBar优化** (新增)
+- [x] **AppBar优化**
   - [x] 高度：44px (toolbarHeight)
   - [x] 左侧：汉堡菜单图标 (Icons.menu)
   - [x] 右侧1：新建对话按钮 (Icons.edit_outlined)
   - [x] 右侧2：主题切换按钮 (Icons.light_mode/dark_mode)
   - [x] 标题居中："Chat"
-- [x] **Drawer切换** (新增)
+- [x] **Drawer切换**
   - [x] DrawerStateProvider状态管理
   - [x] 移动端：切换overlay drawer
   - [x] 桌面端：切换permanent drawer显示/隐藏
+- [x] **Reasoning折叠展开**
+  - [x] 箭头旋转动画 (0.5 to 0.75 turns)
+  - [x] 复制按钮
+  - [x] 折叠/展开状态
 
 **输出文件**:
 ```
-✓ lib/widgets/message_bubble.dart (完整实现)
+✓ lib/widgets/message_bubble.dart (完整实现 + LaTeX 支持)
 ✓ lib/screens/chat_screen.dart (AppBar + 重新生成)
 ✓ lib/navigation/app_router.dart (DrawerStateProvider)
+✓ lib/services/mock_api_service.dart (LaTeX + 混合格式测试数据)
+✓ pubspec.yaml (flutter_markdown_latex + markdown 依赖)
 ✓ assets/copy.png, copy_grey.png, done.png, done_dark.png
 ```
 
@@ -395,10 +408,36 @@ class SwiftChatTextStyles {
 8214129 - feat: add code block copy button and improve styling
 866c01a - feat: add message interaction features  
 9d3ac0b - feat: improve AppBar and drawer interaction
-539ec7d - docs: update COMPONENT_CHECKLIST with Week 2 Day 1-2 progress
+0af0e40 - feat: add Reasoning collapse/expand
+62dfdc4 - feat: add table rendering support
+[本次] - feat: add LaTeX formula support with complete markdown styling
 ```
 
-**参考**: `react-native/src/chat/component/CustomMessageComponent.tsx`
+**LaTeX 实现方案**:
+- ✅ 使用 `flutter_markdown_latex` 包 (避免无限循环问题)
+- ✅ 支持行内公式 `$...$` 和块级公式 `$$...$$`
+- ✅ 与 GitHub Flavored Markdown 完美兼容
+- ✅ 深色模式下所有 Markdown 元素正确显示
+- ✅ 混合格式测试通过（标题+代码+公式+表格+列表）
+
+**关键技术点**:
+```dart
+// 保留 GitHub Flavored Markdown + 添加 LaTeX
+extensionSet: md.ExtensionSet(
+  md.ExtensionSet.gitHubFlavored.blockSyntaxes + [LatexBlockSyntax()],
+  md.ExtensionSet.gitHubFlavored.inlineSyntaxes + [LatexInlineSyntax()],
+),
+
+// 完整的样式定义（包括深色模式）
+styleSheet: MarkdownStyleSheet(
+  h1-h6: TextStyle(color: colors.text),
+  listBullet: TextStyle(color: colors.text),
+  strong/em: TextStyle(color: colors.text),
+  // ... 所有元素都适配主题色
+)
+```
+
+**参考**: `react-native/src/chat/component/markdown/CustomMarkdownRenderer.tsx`
 
 ---
 

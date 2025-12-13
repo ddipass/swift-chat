@@ -4,6 +4,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/github.dart';
 import 'package:flutter_highlight/themes/monokai-sublime.dart';
+import 'package:flutter_markdown_latex/flutter_markdown_latex.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import '../models/message.dart';
 import '../theme/theme_provider.dart';
@@ -284,19 +286,33 @@ class _MessageBubbleState extends State<MessageBubble> {
   }
 
   Widget _buildAIMessage(BuildContext context, colors, bool isDark) {
-    // AI message: Markdown rendering with code blocks
+    // AI message: Markdown rendering with code blocks and LaTeX
     return Container(
       margin: const EdgeInsets.only(top: 1),
       child: MarkdownBody(
         data: widget.message.text,
         selectable: true,
+        extensionSet: md.ExtensionSet(
+          md.ExtensionSet.gitHubFlavored.blockSyntaxes + [LatexBlockSyntax()],
+          md.ExtensionSet.gitHubFlavored.inlineSyntaxes + [LatexInlineSyntax()],
+        ),
         styleSheet: MarkdownStyleSheet(
           p: TextStyle(
             fontSize: 16,
-            height: 1.625, // lineHeight 26 / fontSize 16
+            height: 1.625,
             color: colors.text,
             fontWeight: FontWeight.w300,
           ),
+          h1: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colors.text),
+          h2: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.text),
+          h3: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.text),
+          h4: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.text),
+          h5: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colors.text),
+          h6: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.text),
+          listBullet: TextStyle(fontSize: 16, color: colors.text),
+          em: TextStyle(fontStyle: FontStyle.italic, color: colors.text),
+          strong: TextStyle(fontWeight: FontWeight.bold, color: colors.text),
+          blockquote: TextStyle(color: colors.textSecondary),
           code: TextStyle(
             fontSize: 14,
             backgroundColor: colors.codeBackground,
@@ -308,7 +324,6 @@ class _MessageBubbleState extends State<MessageBubble> {
             borderRadius: BorderRadius.circular(8),
           ),
           codeblockPadding: const EdgeInsets.all(12),
-          // Table styles
           tableHead: TextStyle(
             fontWeight: FontWeight.w600,
             color: colors.text,
@@ -325,6 +340,9 @@ class _MessageBubbleState extends State<MessageBubble> {
         ),
         builders: {
           'code': CodeBlockBuilder(isDark: isDark, colors: colors),
+          'latex': LatexElementBuilder(
+            textStyle: TextStyle(color: colors.text),
+          ),
         },
       ),
     );

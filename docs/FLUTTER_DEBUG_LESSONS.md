@@ -1,7 +1,56 @@
 # Flutter Web 开发 Debug 经验总结
 
 **创建时间**: 2025-12-14  
+**最后更新**: 2025-12-14  
 **重要程度**: ⭐⭐⭐⭐⭐ 必读
+
+---
+
+## 🔴 LaTeX 渲染的正确方案 (2025-12-14 更新)
+
+### 问题背景
+
+之前尝试直接使用 `flutter_math_fork` 实现 LaTeX 支持，遇到了无限循环崩溃问题。
+
+### ✅ 正确解决方案
+
+**使用 `flutter_markdown_latex` 包**，它专门为 `flutter_markdown` 添加 LaTeX 支持：
+
+```yaml
+# pubspec.yaml
+dependencies:
+  flutter_markdown: ^0.6.18
+  flutter_markdown_latex: ^0.3.4  # 自动依赖 flutter_math_fork
+```
+
+**代码实现**:
+```dart
+import 'package:flutter_markdown_latex/flutter_markdown_latex.dart';
+import 'package:markdown/markdown.dart' as md;
+
+MarkdownBody(
+  data: text,
+  extensionSet: md.ExtensionSet(
+    [LatexBlockSyntax()],      // 支持 $$...$$ 块级公式
+    [LatexInlineSyntax()],     // 支持 $...$ 行内公式
+  ),
+  builders: {
+    'latex': LatexElementBuilder(
+      textStyle: TextStyle(color: colors.text),
+    ),
+  },
+)
+```
+
+**支持的语法**:
+- 行内公式: `$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$`
+- 块级公式: `$$E = mc^2$$`
+- 也支持 `\[...\]` 和 `\(...\)` 语法
+
+**为什么这个方案有效？**
+1. `flutter_markdown_latex` 已经处理好了 Tokenizer 和 Builder 的集成
+2. 避免了手动解析 LaTeX 语法导致的无限循环
+3. 与 `flutter_markdown` 完美兼容
 
 ---
 
