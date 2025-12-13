@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
@@ -380,9 +379,7 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUser = message.role == 'user';
     
-    return GestureDetector(
-      onLongPress: () => _showMessageMenu(context, message),
-      child: Align(
+    return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -390,14 +387,12 @@ class _MessageBubble extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
-      ),
         decoration: BoxDecoration(
           color: isUser
               ? Theme.of(context).colorScheme.primaryContainer
               : Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(16),
         ),
-      ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -412,9 +407,7 @@ class _MessageBubble extends StatelessWidget {
                         base64Decode(content.imageSource!),
                         fit: BoxFit.cover,
                       ),
-      ),
                     ),
-      ),
                   );
                 }
                 return const SizedBox();
@@ -426,17 +419,13 @@ class _MessageBubble extends StatelessWidget {
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
-      ),
                     )
                   : MarkdownViewer(
                       data: message.content,
                       isDark: isDark,
                     ),
-      ),
           ],
         ),
-      ),
-      ),
       ),
     );
   }
@@ -499,35 +488,3 @@ class _AttachmentPreview extends StatelessWidget {
     );
   }
 }
-
-  static void _showMessageMenu(BuildContext context, Message message) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.copy),
-              title: const Text('Copy'),
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: message.content));
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Copied to clipboard')),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.share),
-              title: const Text('Share'),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Implement share
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
