@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Permanent drawer layout for Web (like macOS)
+// Permanent drawer layout for Web
 class PermanentDrawerLayout extends StatelessWidget {
   const PermanentDrawerLayout({super.key});
 

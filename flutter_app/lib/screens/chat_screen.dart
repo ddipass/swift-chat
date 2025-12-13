@@ -84,6 +84,7 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         backgroundColor: colors.surface,
         automaticallyImplyLeading: widget.showDrawerButton,
+        leading: widget.showDrawerButton ? null : const SizedBox.shrink(),
         title: Text(
           'Chat',
           style: TextStyle(
