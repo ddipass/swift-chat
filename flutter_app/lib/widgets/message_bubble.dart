@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/github.dart';
-import 'package:flutter_highlight/themes/github-dark.dart';
+import 'package:flutter_highlight/themes/monokai-sublime.dart';
 import 'package:provider/provider.dart';
 import '../models/message.dart';
 import '../theme/theme_provider.dart';
@@ -172,7 +172,7 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
             child: HighlightView(
               code,
               language: language ?? 'plaintext',
-              theme: isDark ? githubDarkTheme : githubTheme,
+              theme: isDark ? monokaiSublimeTheme : githubTheme,
               padding: EdgeInsets.zero,
               textStyle: const TextStyle(
                 fontSize: 14,
