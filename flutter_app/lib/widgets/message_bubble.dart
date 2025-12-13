@@ -15,47 +15,88 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Provider.of<ThemeProvider>(context).colors;
     
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Row(
-        mainAxisAlignment:
-            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.only(left: 12, top: 4, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!message.isUser) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: colors.primary,
-              child: Icon(Icons.smart_toy, size: 18, color: colors.background),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: message.isUser
-                    ? colors.messageBackground
-                    : colors.surface,
-                borderRadius: BorderRadius.circular(22),
+          // Header with avatar and name (AI only)
+          if (!message.isUser)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: colors.primary,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(
+                      Icons.smart_toy,
+                      size: 14,
+                      color: colors.background,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'AI Assistant',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: colors.text,
+                    ),
+                  ),
+                ],
               ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  color: colors.text,
-                  fontSize: 16,
-                ),
-              ),
             ),
+          
+          // Message content
+          Container(
+            margin: const EdgeInsets.only(left: 28, right: 16),
+            child: message.isUser
+                ? _buildUserMessage(context, colors)
+                : _buildAIMessage(colors),
           ),
-          if (message.isUser) ...[
-            const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: colors.primary,
-              child: Icon(Icons.person, size: 18, color: colors.background),
-            ),
-          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildUserMessage(BuildContext context, colors) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: colors.messageBackground,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            fontSize: 16,
+            height: 1.5, // lineHeight 24 / fontSize 16
+            color: colors.text,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAIMessage(colors) {
+    // AI messages don't have bubble background, just plain text
+    return Text(
+      message.text,
+      style: TextStyle(
+        fontSize: 16,
+        height: 1.625, // lineHeight 26 / fontSize 16
+        color: colors.text,
       ),
     );
   }

@@ -81,8 +81,12 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         backgroundColor: colors.surface,
         title: Text(
-          'SwiftChat',
-          style: TextStyle(color: colors.text),
+          'Chat',
+          style: TextStyle(
+            color: colors.text,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         actions: [
           IconButton(
