@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../screens/chat_screen.dart';
 import '../screens/settings_screen.dart';
+import '../widgets/app_drawer.dart';
 
 final router = GoRouter(
   initialLocation: '/chat/-1',
@@ -59,18 +60,5 @@ class MainLayout extends StatelessWidget {
         ),
       );
     }
-  }
-}
-
-class AppDrawer extends StatelessWidget {
-  const AppDrawer({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 300,
-      color: Colors.grey[900],
-      child: const Center(child: Text('Drawer', style: TextStyle(color: Colors.white))),
-    );
   }
 }
