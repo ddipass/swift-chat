@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'theme/theme_provider.dart';
 import 'theme/swift_chat_colors.dart';
 
@@ -25,6 +26,8 @@ class MyApp extends StatelessWidget {
           theme: ThemeData(
             brightness: themeProvider.isDark ? Brightness.dark : Brightness.light,
             scaffoldBackgroundColor: themeProvider.colors.background,
+            textTheme: GoogleFonts.interTextTheme(),
+            fontFamily: GoogleFonts.inter().fontFamily,
           ),
           home: const ThemeTestScreen(),
         );
