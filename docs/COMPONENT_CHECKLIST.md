@@ -245,6 +245,13 @@ class SwiftChatTextStyles {
 - [x] Mock API服务
   - [x] sendMessage() 方法
   - [x] 模拟延迟
+- [x] UI精确复刻
+  - [x] 消息气泡 borderRadius: 22
+  - [x] AI头像: bedrock.png (22x22)
+  - [x] 用户消息: 右对齐，无头像
+  - [x] AI消息: 头像+名字，纯文本内容
+  - [x] 布局: marginLeft 12, marked_box marginLeft 28
+  - [x] 标题: "Chat", fontSize 17, fontWeight 600
 
 **输出文件**:
 ```
