@@ -726,6 +726,71 @@ styleSheet: MarkdownStyleSheet(
 
 ## 📋 开发日志
 
+### 2025-12-14 (Week 2 Day 3-4) ✅ 完成
+
+#### 已完成任务
+- [x] 设置界面核心功能
+- [x] CustomTextField 和 CustomDropdown 组件
+- [x] Bedrock 配置表单（API URL、API Key、Region、Model）
+- [x] SharedPreferences 配置保存/加载
+- [x] 表单验证
+
+#### Git提交
+```
+0c1d334 - feat: implement settings screen with Bedrock configuration
+```
+
+---
+
+### 🔄 开发计划调整 (2025-12-14)
+
+**决策**: 提前进行后端集成（从 Week 3 提前到现在）
+
+**原因**:
+1. ✅ UI 框架已完整（聊天界面 + 设置界面）
+2. ✅ 配置系统已就绪（可保存 API 配置）
+3. ✅ MVP 原则 - 应先打通核心链路
+4. ✅ 真实验证 - 基于真实 API 响应优化 UI
+5. ✅ 用户价值 - 集成后立即可用
+
+**调整后的顺序**:
+```
+当前 → Week 3: 后端集成 (提前执行)
+  Day 1-2: 文本聊天 API 集成 ⭐
+  Day 3: 错误处理和优化
+  Day 4-5: 数据持久化
+
+之后 → Week 2 剩余功能 (基于真实场景)
+  Day 5: 文件上传基础
+  Day 6-7: UI 打磨
+```
+
+**预期收益**:
+- 🎯 立即可用 - App 从"演示"变成"工具"
+- 🎯 避免返工 - 基于真实 API 开发 UI
+- 🎯 真实反馈 - 发现并解决实际问题
+- 🎯 开发效率 - 文件上传等功能基于真实需求实现
+
+---
+
+### 下一步：Week 3 Day 1-2 - 文本聊天 API 集成
+
+**目标**: 打通真实 API 调用，实现完整的聊天功能
+
+**任务清单**:
+- [ ] 实现 BedrockApiService.sendMessage()
+- [ ] 处理 SSE 流式响应
+- [ ] 显示流式文本动画
+- [ ] Token 统计显示
+- [ ] 错误处理和超时
+- [ ] 加载状态显示
+
+**参考文档**:
+- `docs/API_INTEGRATION_GUIDE.md`
+- `react-native/src/api/bedrock-api.ts`
+
+---
+
 ### 2025-12-14 (Week 2 Day 1-2) ✅ 完成
 
 #### 已完成任务
