@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'theme/theme_provider.dart';
 import 'screens/chat_screen.dart';
+import 'widgets/app_drawer.dart';
 
 void main() {
   runApp(
@@ -29,9 +31,26 @@ class MyApp extends StatelessWidget {
             textTheme: GoogleFonts.interTextTheme(),
             fontFamily: GoogleFonts.inter().fontFamily,
           ),
-          home: const ChatScreen(),
+          home: kIsWeb ? const PermanentDrawerLayout() : const ChatScreen(),
         );
       },
+    );
+  }
+}
+
+// Permanent drawer layout for Web (like macOS)
+class PermanentDrawerLayout extends StatelessWidget {
+  const PermanentDrawerLayout({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const AppDrawer(),
+        const Expanded(
+          child: ChatScreen(showDrawerButton: false),
+        ),
+      ],
     );
   }
 }

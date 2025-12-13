@@ -6,9 +6,7 @@ import '../screens/settings_screen.dart';
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
-  // Calculate drawer width matching React Native logic:
-  // const minWidth = screenWidth > screenHeight ? screenHeight : screenWidth;
-  // const width = minWidth > 434 ? 300 : minWidth * 0.83;
+  // Calculate drawer width matching React Native logic
   double _calculateDrawerWidth(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final minWidth = size.width > size.height ? size.height : size.width;
@@ -17,80 +15,87 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Provider.of<ThemeProvider>(context).colors;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final colors = themeProvider.colors;
     final drawerWidth = _calculateDrawerWidth(context);
 
-    return Drawer(
+    return Container(
       width: drawerWidth,
-      backgroundColor: colors.drawerBackground,
+      color: colors.drawerBackgroundMac, // Use Mac background for web
       child: SafeArea(
         child: Column(
           children: [
             // Chat button
-            ListTile(
-              leading: Image.asset(
-                Provider.of<ThemeProvider>(context).isDark
-                    ? 'assets/bedrock_dark.png'
-                    : 'assets/bedrock.png',
-                width: 24,
-                height: 24,
-              ),
-              title: Text(
-                'Chat',
-                style: TextStyle(
-                  color: colors.text,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+            InkWell(
               onTap: () {
                 Navigator.of(context).pop();
               },
-            ),
-            
-            const Divider(),
-            
-            // History section header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'History',
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 14,
-                  ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        themeProvider.isDark
+                            ? 'assets/bedrock_dark.png'
+                            : 'assets/bedrock.png',
+                        width: 24,
+                        height: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Chat',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
             
-            // History list (simplified - empty for now)
+            // Image button
+            InkWell(
+              onTap: () {
+                Navigator.of(context).pop();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.image,
+                      size: 24,
+                      color: colors.text,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Image',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // History list (empty for now)
             Expanded(
-              child: Center(
-                child: Text(
-                  'No history yet',
-                  style: TextStyle(
-                    color: colors.textTertiary,
-                    fontSize: 14,
-                  ),
-                ),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                children: const [],
               ),
             ),
-            
-            const Divider(),
             
             // Settings button
-            ListTile(
-              leading: Icon(Icons.settings, color: colors.text, size: 24),
-              title: Text(
-                'Settings',
-                style: TextStyle(
-                  color: colors.text,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+            InkWell(
               onTap: () {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(
@@ -99,6 +104,83 @@ class AppDrawer extends StatelessWidget {
                   ),
                 );
               },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings,
+                      size: 24,
+                      color: colors.text,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Settings',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Tools button
+            InkWell(
+              onTap: () {
+                Navigator.of(context).pop();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings,
+                      size: 24,
+                      color: colors.text,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Tools',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // MCP Servers button
+            InkWell(
+              onTap: () {
+                Navigator.of(context).pop();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings,
+                      size: 24,
+                      color: colors.text,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'MCP Servers',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),

@@ -8,7 +8,9 @@ import '../widgets/app_drawer.dart';
 import '../theme/theme_provider.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final bool showDrawerButton;
+  
+  const ChatScreen({super.key, this.showDrawerButton = true});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -79,9 +81,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
-      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: colors.surface,
+        automaticallyImplyLeading: widget.showDrawerButton,
         title: Text(
           'Chat',
           style: TextStyle(
