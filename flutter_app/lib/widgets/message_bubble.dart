@@ -30,8 +30,8 @@ class MessageBubble extends StatelessWidget {
                     borderRadius: BorderRadius.circular(11),
                     child: Image.asset(
                       Provider.of<ThemeProvider>(context).isDark
-                          ? 'assets/bedrock_dark.png'
-                          : 'assets/bedrock.png',
+                          ? 'bedrock_dark.png'
+                          : 'bedrock.png',
                       width: 22,
                       height: 22,
                     ),

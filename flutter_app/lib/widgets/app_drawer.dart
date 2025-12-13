@@ -177,15 +177,15 @@ class _AppDrawerState extends State<AppDrawer> {
             _buildButton(
               text: 'Chat',
               iconPath: themeProvider.isDark
-                  ? 'assets/bedrock_dark.png'
-                  : 'assets/bedrock.png',
+                  ? 'bedrock_dark.png'
+                  : 'bedrock.png',
               onTap: () => context.go('/chat/-1?mode=text'),
             ),
             _buildButton(
               text: 'Image',
               iconPath: themeProvider.isDark
-                  ? 'assets/image_dark.png'
-                  : 'assets/image.png',
+                  ? 'image_dark.png'
+                  : 'image.png',
               onTap: () => context.go('/chat/-1?mode=image'),
             ),
 
@@ -209,22 +209,22 @@ class _AppDrawerState extends State<AppDrawer> {
             _buildButton(
               text: 'Settings',
               iconPath: themeProvider.isDark
-                  ? 'assets/settings_dark.png'
-                  : 'assets/settings.png',
+                  ? 'settings_dark.png'
+                  : 'settings.png',
               onTap: () => context.go('/settings'),
             ),
             _buildButton(
               text: 'Tools',
               iconPath: themeProvider.isDark
-                  ? 'assets/settings_dark.png'
-                  : 'assets/settings.png',
+                  ? 'settings_dark.png'
+                  : 'settings.png',
               onTap: () {},
             ),
             _buildButton(
               text: 'MCP Servers',
               iconPath: themeProvider.isDark
-                  ? 'assets/settings_dark.png'
-                  : 'assets/settings.png',
+                  ? 'settings_dark.png'
+                  : 'settings.png',
               onTap: () {},
             ),
           ],
