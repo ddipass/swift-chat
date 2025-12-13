@@ -8,13 +8,41 @@ import 'package:provider/provider.dart';
 import '../models/message.dart';
 import '../theme/theme_provider.dart';
 
-class MessageBubble extends StatelessWidget {
+class MessageBubble extends StatefulWidget {
   final Message message;
+  final bool isLastAIMessage;
+  final VoidCallback? onRegenerate;
 
   const MessageBubble({
     super.key,
     required this.message,
+    this.isLastAIMessage = false,
+    this.onRegenerate,
   });
+
+  @override
+  State<MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<MessageBubble> {
+  bool _titleCopied = false;
+  bool _messageCopied = false;
+
+  void _copyTitle() {
+    Clipboard.setData(const ClipboardData(text: 'AI Assistant'));
+    setState(() => _titleCopied = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _titleCopied = false);
+    });
+  }
+
+  void _copyMessage() {
+    Clipboard.setData(ClipboardData(text: widget.message.text));
+    setState(() => _messageCopied = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _messageCopied = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,39 +55,106 @@ class MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header with avatar and name (AI only)
-          if (!message.isUser)
+          if (!widget.message.isUser)
+            GestureDetector(
+              onTap: _copyTitle,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 0),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
+                      child: Image.asset(
+                        isDark ? 'bedrock_dark.png' : 'bedrock.png',
+                        width: 22,
+                        height: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'AI Assistant',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: colors.text,
+                      ),
+                    ),
+                    if (_titleCopied) ...[
+                      const SizedBox(width: 6),
+                      Image.asset(
+                        isDark ? 'done_dark.png' : 'done.png',
+                        width: 14,
+                        height: 14,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          
+          // Message content with long-press
+          GestureDetector(
+            onLongPress: _copyMessage,
+            child: Container(
+              margin: const EdgeInsets.only(left: 28, right: 16),
+              child: widget.message.isUser
+                  ? _buildUserMessage(context, colors)
+                  : _buildAIMessage(context, colors, isDark),
+            ),
+          ),
+          
+          // Regenerate button (last AI message only)
+          if (!widget.message.isUser && widget.isLastAIMessage && widget.onRegenerate != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 0),
+              padding: const EdgeInsets.only(left: 28, top: 8),
+              child: GestureDetector(
+                onTap: widget.onRegenerate,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: colors.borderLight,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh, size: 16, color: colors.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Regenerate',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          
+          // Copy feedback for long-press
+          if (_messageCopied)
+            Padding(
+              padding: const EdgeInsets.only(left: 28, top: 4),
               child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(11),
-                    child: Image.asset(
-                      isDark ? 'bedrock_dark.png' : 'bedrock.png',
-                      width: 22,
-                      height: 22,
-                    ),
+                  Image.asset(
+                    isDark ? 'done_dark.png' : 'done.png',
+                    width: 14,
+                    height: 14,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
                   Text(
-                    'AI Assistant',
+                    'Copied',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: colors.text,
+                      fontSize: 12,
+                      color: colors.textSecondary,
                     ),
                   ),
                 ],
               ),
             ),
-          
-          // Message content (marked_box)
-          Container(
-            margin: const EdgeInsets.only(left: 28, right: 16),
-            child: message.isUser
-                ? _buildUserMessage(context, colors)
-                : _buildAIMessage(context, colors, isDark),
-          ),
         ],
       ),
     );

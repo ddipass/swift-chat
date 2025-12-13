@@ -29,6 +29,43 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
 
+  void _handleRegenerate() async {
+    if (_messages.isEmpty || _isLoading) return;
+    
+    // Find the last user message
+    String? lastUserMessage;
+    for (var msg in _messages) {
+      if (msg.isUser) {
+        lastUserMessage = msg.text;
+        break;
+      }
+    }
+    
+    if (lastUserMessage == null) return;
+
+    // Remove the last AI message
+    setState(() {
+      if (_messages.isNotEmpty && !_messages[0].isUser) {
+        _messages.removeAt(0);
+      }
+      _isLoading = true;
+    });
+
+    // Get new AI response
+    try {
+      final aiMessage = await _apiService.sendMessage(lastUserMessage);
+      setState(() {
+        _messages.insert(0, aiMessage);
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   void _handleSend() async {
     final text = _textController.text.trim();
     if (text.isEmpty || _isLoading) return;
@@ -132,7 +169,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                      return MessageBubble(message: _messages[index]);
+                      final message = _messages[index];
+                      final isLastAIMessage = index == 0 && !message.isUser;
+                      
+                      return MessageBubble(
+                        message: message,
+                        isLastAIMessage: isLastAIMessage,
+                        onRegenerate: isLastAIMessage ? _handleRegenerate : null,
+                      );
                     },
                   ),
           ),
