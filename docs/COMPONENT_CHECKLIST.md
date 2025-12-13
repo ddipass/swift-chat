@@ -310,28 +310,31 @@ class SwiftChatTextStyles {
 ---
 
 ### Day 7: 自测和调整
-- [ ] 修复UI问题
-- [ ] 调整间距
-- [ ] API适配层接口定义
-  - [ ] ApiService抽象类
-  - [ ] sendMessage接口
-  - [ ] generateImage接口
-  - [ ] getModels接口
+- [x] 修复UI问题
+- [x] 调整间距
+- [x] API适配层接口定义
+  - [x] ApiService抽象类
+  - [x] sendMessage接口
+  - [x] generateImage接口
+  - [x] getModels接口
+  - [x] getTokenUsage接口
+  - [x] 支持类定义 (ImageGenerationProgress, ModelInfo, TokenUsage)
 
 **输出文件**:
 ```
 ✓ lib/services/api_service.dart
 ```
 
-**Day 5-6 完成标准**:
-- [x] 所有任务勾选 [x]
-- [x] 导航结构正确实现
-- [x] 抽屉内容完整显示
+**Week 1 完成标准**:
+- [x] 所有 Day 1-7 任务完成
+- [x] 项目能运行
+- [x] 浅色/深色主题切换正常
+- [x] 消息发送和显示正常
+- [x] 导航和路由正常
 - [x] 图片资源正确加载
-- [x] 路由跳转正常工作
-- [x] Git提交: `git commit -m "feat: complete navigation structure (Week 1 Day 5-6)"`
+- [x] Git提交: `git commit -m "feat: complete Week 1 - MVP skeleton"`
 
-**当前状态**: ✅ Week 1 Day 5-6 完成，准备进入 Day 7
+**当前状态**: ✅ Week 1 完成！准备进入 Week 2
 
 ---
 
