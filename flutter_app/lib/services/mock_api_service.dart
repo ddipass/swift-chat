@@ -54,6 +54,22 @@ Inline `code` and code blocks.''';
 - Text formatting (bold, italic)
 - Lists (bullets and numbers)
 - Code examples (inline and blocks)''';
+    } else if (text.toLowerCase().contains('table') || text.toLowerCase().contains('表格')) {
+      response = '''Here's a comparison table:
+
+| Feature | React Native | Flutter |
+|---------|-------------|---------|
+| Language | JavaScript | Dart |
+| Performance | Good | Excellent |
+| Hot Reload | ✅ Yes | ✅ Yes |
+| Native UI | ✅ Yes | ❌ No |
+
+Tables are great for comparing data!''';
+      reasoning = '''To create a table, I need to:
+1. Define column headers with pipes |
+2. Add separator row with dashes
+3. Fill in data rows
+4. Ensure proper alignment''';
     } else {
       response = 'This is a mock AI response to: "$text"';
       reasoning = 'This is a general query, so I provide a helpful response.';

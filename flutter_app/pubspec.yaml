@@ -44,6 +44,7 @@ dependencies:
   # Markdown rendering
   flutter_markdown: ^0.6.18
   flutter_highlight: ^0.7.0
+  flutter_math_fork: ^0.7.2  # LaTeX math formulas
   
   # WebView for charts
   webview_flutter: ^4.4.2

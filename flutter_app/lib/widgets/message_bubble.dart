@@ -308,6 +308,20 @@ class _MessageBubbleState extends State<MessageBubble> {
             borderRadius: BorderRadius.circular(8),
           ),
           codeblockPadding: const EdgeInsets.all(12),
+          // Table styles
+          tableHead: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: colors.text,
+          ),
+          tableBody: TextStyle(
+            fontSize: 14,
+            color: colors.text,
+          ),
+          tableBorder: TableBorder.all(
+            color: colors.border,
+            width: 1,
+          ),
+          tableCellsPadding: const EdgeInsets.all(8),
         ),
         builders: {
           'code': CodeBlockBuilder(isDark: isDark, colors: colors),
