@@ -4,13 +4,19 @@ import 'package:uuid/uuid.dart';
 import '../models/message.dart';
 import '../services/mock_api_service.dart';
 import '../widgets/message_bubble.dart';
-import '../widgets/app_drawer.dart';
 import '../theme/theme_provider.dart';
 
 class ChatScreen extends StatefulWidget {
-  final bool showDrawerButton;
-  
-  const ChatScreen({super.key, this.showDrawerButton = true});
+  final int sessionId;
+  final int tapIndex;
+  final String mode;
+
+  const ChatScreen({
+    super.key,
+    this.sessionId = -1,
+    this.tapIndex = 1,
+    this.mode = 'text',
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -83,8 +89,6 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: colors.background,
       appBar: AppBar(
         backgroundColor: colors.surface,
-        automaticallyImplyLeading: widget.showDrawerButton,
-        leading: widget.showDrawerButton ? null : const SizedBox.shrink(),
         title: Text(
           'Chat',
           style: TextStyle(
