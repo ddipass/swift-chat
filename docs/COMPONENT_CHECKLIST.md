@@ -773,25 +773,45 @@ styleSheet: MarkdownStyleSheet(
 
 ---
 
-### 下一步：Week 3 Day 1-2 - 文本聊天 API 集成
+## Week 3: 后端集成 (2025-12-14)
 
-**目标**: 打通真实 API 调用，实现完整的聊天功能
+### Day 1-2: 文本聊天 API 集成 ⏳ 进行中
 
-**任务清单**:
-- [ ] 实现 BedrockApiService.sendMessage()
-- [ ] 处理 SSE 流式响应
-- [ ] 显示流式文本动画
+#### 已完成
+- [x] BedrockApiService 实现
+  - [x] SSE 流式响应处理
+  - [x] 消息格式转换
+  - [x] 错误处理
+- [x] ChatScreen 集成
+  - [x] 从 SharedPreferences 读取配置
+  - [x] 流式文本显示
+  - [x] 加载状态指示器
+  - [x] Mock API fallback
+- [x] 后端 CORS 支持
+  - [x] 添加 CORSMiddleware
+  - [x] 重新构建镜像
+  - [x] 触发 AppRunner 部署
+
+#### 待完成
+- [ ] 等待 AppRunner 部署完成（3-5分钟）
+- [ ] 测试真实 API 调用
 - [ ] Token 统计显示
-- [ ] 错误处理和超时
-- [ ] 加载状态显示
+- [ ] 错误处理优化
 
-**参考文档**:
-- `docs/API_INTEGRATION_GUIDE.md`
-- `react-native/src/api/bedrock-api.ts`
+**当前状态**: 
+- ✅ 代码已完成
+- ✅ 后端已部署
+- ⏳ AppRunner 正在更新（Operation ID: 5a1cdff0da9d4eda8ae264c88db0a573）
+- ⏳ 等待 CORS 生效
+
+**Git提交**:
+```
+ade5f5a - feat: add backend API integration and CORS support
+```
 
 ---
 
-### 2025-12-14 (Week 2 Day 1-2) ✅ 完成
+### 下一步：Week 3 Day 3-4 数据持久化
 
 #### 已完成任务
 - [x] 消息气泡样式完善（用户/AI）
